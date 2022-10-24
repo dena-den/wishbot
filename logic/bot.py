@@ -96,7 +96,8 @@ async def display_my_wishlist_process(message: types.Message, state: FSMContext)
         await c.add_user_to_db(message=message, state=state)
     is_user_exist = await c.check_is_user_exist(tg_id=message.from_user.id)
     if is_user_exist:
-        response = await c.display_my_wishlist(message=message, state=state)
+        tg_id = message.from_user.id
+        response = await c.display_my_wishlist(tg_id=tg_id, state=state)
     else:
         response = await c.command_start(message=message, state=state)
         response['text'] = 'Для начала нужно создать список подарков'
@@ -123,7 +124,7 @@ async def enter_wish_name_process(message: types.Message, state: FSMContext):
                     state=states.Wish.wish_name_to_add)
 async def add_wish_process(message: types.Message, state: FSMContext):
     await c.add_wish(message=message, state=state)
-    response = await c.display_my_wishlist(message=message, state=state)
+    response = await c.display_my_wishlist(tg_id=message.from_user.id, state=state)
     await message.reply(
         text=response["text"],
         reply_markup=response["markup"],
@@ -132,12 +133,73 @@ async def add_wish_process(message: types.Message, state: FSMContext):
     )
 
 
-# @dp.callback_query_handler()
-# async def del_point_from_list_process(query: CallbackQuery):
-#     response = await c.del_point_from_list(query=query)
-#     await bot.send_message(chat_id=query.from_user.id,
-#                         text=response['text'],
-#                         reply_markup=response['markup'])
+@dp.callback_query_handler(classes.WishToDelete.filter(), state='*')
+async def delete_wish_process(query: types.CallbackQuery, state: FSMContext, callback_data: dict):
+    await c.delete_wish(wish_id=callback_data['wish_id'])
+    tg_id = query.from_user.id
+    deleted_wish_name = await c.get_wish_name(wish_id=callback_data['wish_id'])
+    response = await c.display_my_wishlist(tg_id=tg_id, state=state)
+    response['text'] = f'Подарок "{deleted_wish_name}" удален.'
+    await bot.send_message(chat_id=tg_id,
+                        text=response['text'],
+                        reply_markup=response['markup'])
+
+
+@dp.message_handler(Text(equals='Забронированные мною подарки'), state='*')
+async def display_wishes_reserved_by_me_process(message: types.Message, state: FSMContext):
+    tg_id = message.from_user.id
+    response = await c.display_wishes_reserved_by_me(tg_id=tg_id, state=state)
+    await message.reply(
+        text=response["text"],
+        reply_markup=response["markup"],
+        parse_mode="HTML",
+        reply=False
+    )
+
+
+@dp.message_handler(Text(equals='Выбрать подарок другу'))
+@dp.message_handler(Text(equals='Назад к введению кода'), state='*')
+async def enter_friends_code_process(message: types.Message, state: FSMContext):
+    response = await c.enter_friends_code(message=message, state=state)
+    await message.reply(
+        text=response["text"],
+        reply_markup=response["markup"],
+        parse_mode="HTML",
+        reply=False
+    )
+
+
+@dp.message_handler(lambda msg: not msg.text.startswith(('Назад', '/')),
+                    state=states.Friend.friend_code)
+async def display_friends_wishlist_process(message: types.Message, state: FSMContext):
+    friend_user_id = await c.get_friend_user_id(message=message, state=state)
+    response = await c.display_friends_wishlist(tg_id=message.from_user.id, friend_user_id=friend_user_id)
+    await message.reply(
+        text=response["text"],
+        reply_markup=response["markup"],
+        parse_mode="HTML",
+        reply=False
+    )
+
+
+@dp.callback_query_handler(classes.WishToReserve.filter(), state='*')
+async def reserve_wish_process(query: types.CallbackQuery, state: FSMContext, callback_data: dict):
+    tg_id = query.from_user.id
+    await c.reserve_wish(wish_id=callback_data['wish_id'], tg_id=tg_id)
+    response = await c.display_wishes_reserved_by_me(tg_id=tg_id, state=state)
+    await bot.send_message(chat_id=tg_id,
+                        text=response['text'],
+                        reply_markup=response['markup'])
+
+
+@dp.callback_query_handler(classes.WishToUnreserve.filter(), state='*')
+async def unreserve_wish_process(query: types.CallbackQuery, state: FSMContext, callback_data: dict):
+    tg_id = query.from_user.id
+    await c.unreserve_wish(wish_id=callback_data['wish_id'], tg_id=tg_id)
+    response = await c.display_wishes_reserved_by_me(tg_id=tg_id, state=state)
+    await bot.send_message(chat_id=tg_id,
+                        text=response['text'],
+                        reply_markup=response['markup'])
 
 
 """@dp.message_handler(Text(equals="Notification"))

@@ -9,6 +9,7 @@ def start_menu_markup(is_user_exist: int):
         markup.insert(types.KeyboardButton("Открыть мой список подарков"))
     else:
         markup.insert(types.KeyboardButton("Создать мой список подарков"))
+    markup.add(types.KeyboardButton("Забронированные мною подарки"))
     markup.insert(types.KeyboardButton("Выбрать подарок другу"))
     return markup
 
@@ -37,8 +38,41 @@ def my_wishlist_markup():
     return markup
 
 
-def delete_wish_button(id: int, name: str):
+def delete_wish_button(wish_id: int):
     markup = types.InlineKeyboardMarkup()
-    gift_data = dict(id=id, name=name)
-    markup.add(types.InlineKeyboardButton('Удалить', callback_data=utils.pack_json(gift_data)))
+    markup.add(types.InlineKeyboardButton(
+        'Удалить',
+        callback_data=classes.WishToDelete.new(wish_id=wish_id)
+    ))
+    return markup
+
+
+def reserve_wish_button(wish_id: int):
+    markup = types.InlineKeyboardMarkup()
+    markup.add(types.InlineKeyboardButton(
+        'Забронировать',
+        callback_data=classes.WishToReserve.new(wish_id=wish_id)
+    ))
+    return markup
+
+
+def unreserve_wish_button(wish_id: int):
+    markup = types.InlineKeyboardMarkup()
+    markup.add(types.InlineKeyboardButton(
+        'Отменить',
+        callback_data=classes.WishToUnreserve.new(wish_id=wish_id)
+    ))
+    return markup
+
+
+def friend_wishlist_markup():
+    markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
+    markup.insert(types.KeyboardButton("Назад к введению кода"))
+    return markup
+
+    
+def wishes_reseved_by_me_markup():
+    markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
+    markup.insert(types.KeyboardButton("Назад в стартовое меню"))
+    markup.insert(types.KeyboardButton("Выбрать подарок другу"))
     return markup

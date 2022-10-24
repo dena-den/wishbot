@@ -33,6 +33,6 @@ class WishHistory(Base):
     __tablename__ = "wish_histories"
     id = Column(Integer, primary_key=True)
     tg_id_who_chose = Column(BigInteger, nullable=False)
-    gift_id = Column(Integer, ForeignKey("wishlists.id"), nullable=False)
-    start_datetime = Column(DateTime, nullable=False)
+    wish_id = Column(Integer, ForeignKey("wishlists.id"), nullable=False)
+    start_datetime = Column(DateTime, default=get_moscow_datetime())
     end_datetime = Column(DateTime, default=None)
