@@ -145,6 +145,27 @@ async def delete_wish_process(query: types.CallbackQuery, state: FSMContext, cal
                         reply_markup=response['markup'])
 
 
+@dp.callback_query_handler(classes.AddLink.filter(), state='*')
+async def input_wish_link_process(query: types.CallbackQuery, state: FSMContext, callback_data: dict):
+    response = await c.input_wish_link(state=state, wish_id=callback_data['wish_id'])
+    await bot.send_message(chat_id=query.from_user.id,
+                           text=response['text'],
+                           reply_markup=response['markup'])
+
+
+@dp.message_handler(lambda msg: not msg.text.startswith(('Назад', '/')),
+                    state=states.Wish.wish_link_to_add)
+async def add_wish_link_process(message: types.Message, state: FSMContext):
+    await c.add_wish_link(state=state, wish_link=message.text)
+    response = await c.display_my_wishlist(tg_id=message.from_user.id, state=state)
+    await message.reply(
+        text=response["text"],
+        reply_markup=response["markup"],
+        parse_mode="HTML",
+        reply=False
+    )
+
+
 @dp.message_handler(Text(equals='Забронированные мною подарки'), state='*')
 async def display_wishes_reserved_by_me_process(message: types.Message, state: FSMContext):
     tg_id = message.from_user.id

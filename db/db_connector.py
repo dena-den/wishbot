@@ -120,6 +120,13 @@ class Database:
                 data = Wishlist(**wishlist_data)
                 session.add(data)
 
+    def add_wish_link(self, wish_id, link):
+        with self.session() as session:
+            with session.begin():
+                session.query(Wishlist)\
+                .where(Wishlist.id.__eq__(wish_id))\
+                .update({Wishlist.product_link: link})
+
     def delete_wish(self, wish_id):
         with self.session() as session:
             with session.begin():

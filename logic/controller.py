@@ -4,6 +4,8 @@ from db.db_connector import Database
 from const.queries import *
 from . import markups
 from const import states
+import re
+from logic import utils
 
 
 class Controller:
@@ -26,21 +28,47 @@ class Controller:
         return dict(text=text, markup=markup)
 
     async def enter_birthdate(self, message, state):
-        if not message.text.startswith('Назад'):
-            async with state.proxy() as data:
-                data['name'] = message.text
-        text = f"Введите дату рождения"
-        markup = markups.back_to_markup(to='name')
-        await state.set_state(states.User.birthdate)
+        name_pattern = r'[ёЁА-Яа-я- A-za-z]+'
+        user_data = message.text
+        if not user_data.startswith('Назад'):
+            if re.fullmatch(name_pattern, user_data) and len(user_data) < 128:
+                async with state.proxy() as data:
+                    data['name'] = user_data
+                text = f"Введите дату рождения"
+                markup = markups.back_to_markup(to='name')
+                await state.set_state(states.User.birthdate)
+            elif not len(user_data) < 128:
+                text = "Введено слишком длинное имя. Максимальная длина 128 символов.\n" \
+                       "Введите имя."
+                markup = markups.back_to_markup(to='start')
+            else:
+                text = "Введено некорректное имя.\n" \
+                       "Пожалуйста, используйте только буквы кириллицы или латиницы, тире.\n" \
+                       "Введите имя."
+                markup = markups.back_to_markup(to='start')
+        else:
+            text = f"Введите дату рождения"
+            markup = markups.back_to_markup(to='name')
+            await state.set_state(states.User.birthdate)
         return dict(text=text, markup=markup)
 
     async def enter_phone(self, message, state):
-        if not message.text.startswith('Назад'):
-            async with state.proxy() as data:
-                data['birthdate'] = datetime.strptime(message.text, r'%d.%m.%Y').date()
-        text = f"Введите номер телефона, если не против"
-        markup = markups.back_to_markup(to='birthdate')
-        await state.set_state(states.User.phone)
+        user_data = message.text
+        birthdate = utils.birthdate_processing(input=user_data)
+        if not user_data.startswith('Назад'):
+            if birthdate:
+                async with state.proxy() as data:
+                    data['birthdate'] = birthdate
+                text = f"Введите номер телефона, если не против."
+                markup = markups.back_to_markup(to='birthdate')
+                await state.set_state(states.User.phone)
+            else:
+                text = 'Введена некорректная дата.'
+                markup = markups.back_to_markup(to='name')
+        else:
+            text = f"Введите номер телефона, если не против."
+            markup = markups.back_to_markup(to='birthdate')
+            await state.set_state(states.User.phone)
         return dict(text=text, markup=markup)
 
     async def check_data(self, message, state):
@@ -72,14 +100,21 @@ class Controller:
         wishes = self.db.get_wishes_by_tg_id(tg_id=tg_id)
         for wish in wishes:
             wish_id = wish.pop('id')
-            wish['is_reserved'] = '🔒' if wish['is_reserved'] else '🆓'
+            if wish['is_reserved']:
+                wish['is_reserved'] = '🔒'
+                delete_wish_markup = markups.delete_wish_button(wish_id=wish_id, delete_button_enabled=0)
+            else:
+                wish['is_reserved'] = '🆓'
+                delete_wish_markup = markups.delete_wish_button(wish_id=wish_id, delete_button_enabled=1)
             text = "\n".join([str(row) for row in wish.values() if row])
-            delete_wish_markup = markups.delete_wish_button(wish_id=wish_id)
             await self.bot.send_message(chat_id=tg_id,
                                 text=text,
                                 reply_markup=delete_wish_markup,
                                 parse_mode='HTML')
-        text = 'Это твой список подарков'
+        if wishes:
+            text = 'Это твой список подарков.'
+        else:
+            text = 'Твой список подарков пуст. Их можно добавить с помощью кнопки ниже.'
         markup = markups.my_wishlist_markup()
         return dict(text=text, markup=markup)
 
@@ -107,6 +142,19 @@ class Controller:
 
     async def delete_wish(self, wish_id):
         self.db.delete_wish(wish_id=wish_id)
+
+    async def input_wish_link(self, state, wish_id):
+        text = 'Вставьте ссылку, которую хотите добавить'
+        markup = markups.back_to_markup(to='wishlist')
+        await state.set_state(states.Wish.wish_link_to_add)
+        async with state.proxy() as data:
+            data['wish_id'] = wish_id
+        return dict(text=text, markup=markup)
+
+    async def add_wish_link(self, state, wish_link):
+        async with state.proxy() as data:
+            self.db.add_wish_link(wish_id=data['wish_id'], link=wish_link)
+        await state.finish()
 
     async def display_wishes_reserved_by_me(self, tg_id, state):
         await state.finish()

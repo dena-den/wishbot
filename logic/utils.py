@@ -1,7 +1,7 @@
-import json
 from pytz import timezone
-import datetime
+from datetime import datetime
 from random import randint
+import re
 
 
 class Dict(dict):
@@ -10,16 +10,23 @@ class Dict(dict):
     __delattr__ = dict.__getitem__
 
 
-def pack_json(data):
-    return json.dumps(data)
-
-
-def unpack_json(callback_data):
-    return json.loads(callback_data)
-
-
 def get_moscow_datetime():
     spb_timezone = timezone("Europe/Moscow")
-    local_time = datetime.datetime.now().replace(microsecond=0)
+    local_time = datetime.now().replace(microsecond=0)
     current_time = local_time.astimezone(spb_timezone)
     return current_time
+
+
+def birthdate_processing(input: str):
+    birthdate_pattern = r'[a-zA-ZёЁа-яА-Я]'
+    if re.search(birthdate_pattern, input):
+        return False
+    numbers_pattern = r'[0-9]'
+    birthdate_numbers = ''.join(re.findall(numbers_pattern, input))
+    if len(birthdate_numbers) != 8:
+        return False
+    try:
+        birthdate = datetime.strptime(birthdate_numbers, r'%d%m%Y').date()
+    except ValueError:
+        return False
+    return birthdate

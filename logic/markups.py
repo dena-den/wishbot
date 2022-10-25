@@ -38,12 +38,17 @@ def my_wishlist_markup():
     return markup
 
 
-def delete_wish_button(wish_id: int):
+def delete_wish_button(wish_id: int, delete_button_enabled: int):
     markup = types.InlineKeyboardMarkup()
+    if delete_button_enabled:
+        markup.add(types.InlineKeyboardButton(
+            'Удалить',
+            callback_data=classes.WishToDelete.new(wish_id=wish_id)
+        ))
     markup.add(types.InlineKeyboardButton(
-        'Удалить',
-        callback_data=classes.WishToDelete.new(wish_id=wish_id)
-    ))
+            'Добавить ссылку',
+            callback_data=classes.AddLink.new(wish_id=wish_id)
+        ))
     return markup
 
 
