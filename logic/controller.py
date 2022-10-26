@@ -6,6 +6,7 @@ from . import markups
 from const import states
 import re
 from logic import utils
+import logging
 
 
 class Controller:
@@ -76,7 +77,7 @@ class Controller:
             if message.text == 'Не хочу сообщать':
                 data['phone'] = None
             else:
-                data['phone'] = message.text
+                data['phone'] = message.contact.phone_number.strip('+')
             user_data = ', '.join([str(value) for value in data.values() if value])
             text = "Проверьте корректность введенных данных:\n" \
                    f"{user_data}"
@@ -107,6 +108,7 @@ class Controller:
                 wish['is_reserved'] = '🆓'
                 delete_wish_markup = markups.delete_wish_button(wish_id=wish_id, delete_button_enabled=1)
             text = "\n".join([str(row) for row in wish.values() if row])
+            logging.info(f'LOOK: {tg_id}, {text}, {delete_wish_markup}')
             await self.bot.send_message(chat_id=tg_id,
                                 text=text,
                                 reply_markup=delete_wish_markup,

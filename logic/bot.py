@@ -10,6 +10,7 @@ from .middlewares import LoggingMiddleware, ThrottlingMiddleware
 from .controller import Controller
 from const import classes
 from const import states
+from logic import markups
 
 #! temp
 from dotenv import load_dotenv
@@ -41,7 +42,12 @@ async def command_start_process(message: types.Message, state: FSMContext):
 @dp.message_handler(Text(equals='Создать мой список подарков'))
 @dp.message_handler(Text(equals='Назад к вводу имени'), state='*')
 async def enter_name_process(message: types.Message, state: FSMContext):
-    response = await c.enter_name(message=message, state=state)
+    is_user_exist = await c.check_is_user_exist(tg_id=message.from_user.id)
+    if not is_user_exist:
+        response = await c.enter_name(message=message, state=state)
+    else:
+        tg_id = message.from_user.id
+        response = await c.display_my_wishlist(tg_id=tg_id, state=state)
     await message.reply(
         text=response["text"],
         reply_markup=response["markup"],
@@ -76,16 +82,42 @@ async def enter_phone_process(message: types.Message, state: FSMContext):
     )
 
 
-@dp.message_handler(lambda msg: not msg.text.startswith(('Назад', 'Все', '/')),
+@dp.message_handler(content_types=['contact', 'text'], 
                     state=states.User.phone)
 async def check_data_process(message: types.Message, state: FSMContext):
-    response = await c.check_data(message=message, state=state)
-    await message.reply(
-        text=response["text"],
-        reply_markup=response["markup"],
-        parse_mode="HTML",
-        reply=False
-    )
+    # very complicated logic, but ...
+    try:
+        _ = message.contact.phone_number
+        response = await c.check_data(message=message, state=state)
+        await message.reply(
+            text=response["text"],
+            reply_markup=response["markup"],
+            parse_mode="HTML",
+            reply=False
+        )
+    except AttributeError:
+        if message.text == 'Не хочу сообщать':
+            response = await c.check_data(message=message, state=state)
+            await message.reply(
+                text=response["text"],
+                reply_markup=response["markup"],
+                parse_mode="HTML",
+                reply=False
+            )
+        elif message.text == 'Все правильно':
+            await display_my_wishlist_process(message=message, state=state)
+        else:
+            response = dict(
+                text='Пожалуйста, воспользуйтесь кнопкой "Поделиться номером телефона".',
+                markup=markups.back_to_markup(to='birthdate')
+            )
+            await message.reply(
+                text=response["text"],
+                reply_markup=response["markup"],
+                parse_mode="HTML",
+                reply=False
+            )
+
 
 
 @dp.message_handler(Text(equals='Открыть мой список подарков'), state='*')
