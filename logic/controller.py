@@ -7,12 +7,19 @@ from const import states
 import re
 from logic import utils
 import logging
+from const.consts import *
+from logic import memory
+from random import randint
 
 
 class Controller:
     def __init__(self, bot):
         self.bot = bot
         self.db = Database()
+        self.load_user_ids()
+
+    def load_user_ids(self):
+        memory.user_ids = self.db.get_all_user_ids()
 
     async def command_start(self, message, state):
         await state.finish()
@@ -20,6 +27,11 @@ class Controller:
         text = f"Привет, {name}!"
         is_user_exist = self.db.is_user_exist(tg_id=message.from_user.id)
         markup = markups.start_menu_markup(is_user_exist=is_user_exist)
+        return dict(text=text, markup=markup)
+
+    async def get_instruction(self):
+        text = INSTRUCTION
+        markup = markups.back_to_markup(to='start')
         return dict(text=text, markup=markup)
 
     async def enter_name(self, message, state):
@@ -85,8 +97,16 @@ class Controller:
         return dict(text=text, markup=markup)
 
     async def add_user_to_db(self, message, state):
+        while True:
+            user_id = randint(100000, 999999)
+            if user_id in memory.user_ids:
+                continue
+            else:
+                memory.user_ids.append(user_id)
+                break
         async with state.proxy() as data:
             user_data = dict(
+                id=user_id,
                 name=data['name'],
                 birthdate=data['birthdate'],
                 phone=data['phone'],
@@ -103,7 +123,7 @@ class Controller:
             wish_id = wish.pop('id')
             delete_button_disabled = bool(wish['is_reserved'])
             add_link_button_disabled = bool(wish['product_link'])
-            wish['is_reserved'] = '🔒'if wish['is_reserved'] else '🆓'
+            wish['is_reserved'] = '🔒' if wish['is_reserved'] else '🆓'
             delete_wish_markup = markups.delete_wish_button(
                 wish_id=wish_id,
                 delete_button_disabled=delete_button_disabled,

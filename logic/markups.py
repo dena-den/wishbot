@@ -9,7 +9,8 @@ def start_menu_markup(is_user_exist: int):
         markup.insert(types.KeyboardButton("Открыть мой список подарков"))
     else:
         markup.insert(types.KeyboardButton("Создать мой список подарков"))
-    markup.add(types.KeyboardButton("Забронированные мною подарки"))
+    markup.insert(types.KeyboardButton("Забронированные мною подарки"))
+    markup.insert(types.KeyboardButton("Инструкция к пользованию"))
     markup.insert(types.KeyboardButton("Выбрать подарок другу"))
     return markup
 
@@ -40,8 +41,7 @@ def my_wishlist_markup():
     return markup
 
 
-def delete_wish_button(message_id: int,
-                       wish_id: int,
+def delete_wish_button(wish_id: int,
                        delete_button_disabled: bool,
                        add_link_button_disabled: bool):
     markup = types.InlineKeyboardMarkup()

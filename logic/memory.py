@@ -1,2 +1,1 @@
-
-admins = {}
+user_ids = []

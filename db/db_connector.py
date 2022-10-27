@@ -4,18 +4,23 @@ from sqlalchemy.sql.elements import and_, or_
 from .models import *
 from os import getenv
 from sqlalchemy import select, Column, Integer, String, ForeignKey, Boolean, DateTime, SmallInteger, Text, DECIMAL, text, func
-from random import randint
 from const.queries import *
 from logic.utils import get_moscow_datetime
-import pymysql
-import sys
-import mysql.connector
+from logic import memory
 
 
 class Database:
     def __init__(self):
         engine = sqlalchemy.create_engine(getenv("DATABASE"))
         self.session = scoped_session(sessionmaker(bind=engine))
+
+    def get_all_user_ids(self):
+        with self.session() as session:
+            with session.begin():
+                query = session \
+                    .execute(select(User.id)) \
+                    .fetchall()
+                return [row['id'] for row in query if query]
 
     def is_user_exist(self, tg_id):
         with self.session() as session:
@@ -107,21 +112,9 @@ class Database:
     def add_user(self, user_data):
         with self.session() as session:
             with session.begin():
-                user_data['id'] = randint(100000, 999999)
-                data = User(**user_data)
+                data = User(**user_data)       
                 session.add(data)
 
-                # user_data['id'] = 831394
-                # while True:
-                #     user_data['id'] += 1 #randint(100000, 999999)
-                #     data = User(**user_data)
-                #     session.add(data)
-                #     try:
-                #         session.add(data)
-                #         break
-                #     except mysql.connector.Error as e: # (sqlalchemy.exc.IntegrityError, pymysql.err.IntegrityError):
-                #         print('IntegrityError\n', e)
-                #         continue
 
     def add_wish(self, wishlist_data):
         with self.session() as session:

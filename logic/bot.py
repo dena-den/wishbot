@@ -39,7 +39,19 @@ async def command_start_process(message: types.Message, state: FSMContext):
     )
 
 
-@dp.message_handler(Text(equals='Создать мой список подарков'))
+@dp.message_handler(commands='instruction', state='*')
+@dp.message_handler(Text(equals='Инструкция к пользованию'), state='*')
+async def get_instruction_process(message: types.Message):
+    response = await c.get_instruction()
+    await message.reply(
+        text=response["text"],
+        reply_markup=response["markup"],
+        parse_mode="HTML",
+        reply=False
+    )
+
+
+@dp.message_handler(Text(equals='Создать мой список подарков'), state='*')
 @dp.message_handler(Text(equals='Назад к вводу имени'), state='*')
 async def enter_name_process(message: types.Message, state: FSMContext):
     is_user_exist = await c.check_is_user_exist(tg_id=message.from_user.id)
@@ -82,44 +94,38 @@ async def enter_phone_process(message: types.Message, state: FSMContext):
     )
 
 
-@dp.message_handler(content_types=['contact', 'text'], 
+@dp.message_handler(content_types=['contact'], 
                     state=states.User.phone)
-async def check_data_process(message: types.Message, state: FSMContext):
-    # very complicated logic, but ...
-    try:
-        _ = message.contact.phone_number
+async def check_data_with_phone_process(message: types.Message, state: FSMContext):
+    response = await c.check_data(message=message, state=state)
+    await message.reply(
+        text=response["text"],
+        reply_markup=response["markup"],
+        parse_mode="HTML",
+        reply=False
+    )
+        
+
+@dp.message_handler(lambda msg: not msg.text.startswith(('Назад', '/', 'Все')),
+                    state=states.User.phone)
+async def check_data_no_phone_process(message: types.Message, state: FSMContext):
+    if message.text == 'Не хочу сообщать':
         response = await c.check_data(message=message, state=state)
-        await message.reply(
-            text=response["text"],
-            reply_markup=response["markup"],
-            parse_mode="HTML",
-            reply=False
+    else:
+        response = dict(
+            text='Пожалуйста, воспользуйтесь кнопкой "Поделиться номером телефона".',
+            markup=markups.back_to_markup(to='birthdate')
         )
-    except AttributeError:
-        if message.text == 'Не хочу сообщать':
-            response = await c.check_data(message=message, state=state)
-            await message.reply(
-                text=response["text"],
-                reply_markup=response["markup"],
-                parse_mode="HTML",
-                reply=False
-            )
-        elif message.text == 'Все правильно':
-            await display_my_wishlist_process(message=message, state=state)
-        else:
-            response = dict(
-                text='Пожалуйста, воспользуйтесь кнопкой "Поделиться номером телефона".',
-                markup=markups.back_to_markup(to='birthdate')
-            )
-            await message.reply(
-                text=response["text"],
-                reply_markup=response["markup"],
-                parse_mode="HTML",
-                reply=False
-            )
+    await message.reply(
+        text=response["text"],
+        reply_markup=response["markup"],
+        parse_mode="HTML",
+        reply=False
+    )
 
 
 
+@dp.message_handler(commands='my_wishes', state='*')
 @dp.message_handler(Text(equals='Открыть мой список подарков'), state='*')
 @dp.message_handler(Text(equals='Все правильно'), state=states.User.phone)
 @dp.message_handler(Text(equals='Назад к списку'), state=states.Wish.wish_name_to_add)
@@ -198,6 +204,7 @@ async def add_wish_link_process(message: types.Message, state: FSMContext):
     )
 
 
+@dp.message_handler(commands='reserved_wishes', state='*')
 @dp.message_handler(Text(equals='Забронированные мною подарки'), state='*')
 async def display_wishes_reserved_by_me_process(message: types.Message, state: FSMContext):
     tg_id = message.from_user.id
@@ -210,6 +217,7 @@ async def display_wishes_reserved_by_me_process(message: types.Message, state: F
     )
 
 
+@dp.message_handler(commands='friend_wishes', state='*')
 @dp.message_handler(Text(equals='Выбрать подарок другу'))
 @dp.message_handler(Text(equals='Назад к введению кода'), state='*')
 async def enter_friends_code_process(message: types.Message, state: FSMContext):
@@ -243,7 +251,8 @@ async def reserve_wish_process(query: types.CallbackQuery, state: FSMContext, ca
     response['text'] = '<b>Подарок успешно забронирован!</b>\n\n' + response['text']
     await bot.send_message(chat_id=tg_id,
                         text=response['text'],
-                        reply_markup=response['markup'])
+                        reply_markup=response['markup'],
+                        parse_mode='HTML')
 
 
 @dp.callback_query_handler(classes.WishToUnreserve.filter(), state='*')
