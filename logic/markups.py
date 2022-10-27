@@ -40,17 +40,25 @@ def my_wishlist_markup():
     return markup
 
 
-def delete_wish_button(wish_id: int, delete_button_enabled: int):
+def delete_wish_button(message_id: int,
+                       wish_id: int,
+                       delete_button_disabled: bool,
+                       add_link_button_disabled: bool):
     markup = types.InlineKeyboardMarkup()
-    if delete_button_enabled:
+    if not delete_button_disabled:
         markup.add(types.InlineKeyboardButton(
             'Удалить',
-            callback_data=classes.WishToDelete.new(wish_id=wish_id)
+            callback_data=classes.WishToDelete.new(
+                wish_id=wish_id
+            )
         ))
-    markup.add(types.InlineKeyboardButton(
-            'Добавить ссылку',
-            callback_data=classes.AddLink.new(wish_id=wish_id)
-        ))
+    if not add_link_button_disabled:
+        markup.add(types.InlineKeyboardButton(
+                'Добавить ссылку',
+                callback_data=classes.AddLink.new(
+                    wish_id=wish_id
+                )
+            ))
     return markup
 
 
@@ -74,6 +82,7 @@ def unreserve_wish_button(wish_id: int):
 
 def friend_wishlist_markup():
     markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
+    markup.insert(types.KeyboardButton("Назад в стартовое меню"))
     markup.insert(types.KeyboardButton("Назад к введению кода"))
     return markup
 

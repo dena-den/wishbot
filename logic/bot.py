@@ -226,7 +226,7 @@ async def enter_friends_code_process(message: types.Message, state: FSMContext):
                     state=states.Friend.friend_code)
 async def display_friends_wishlist_process(message: types.Message, state: FSMContext):
     friend_user_id = await c.get_friend_user_id(message=message, state=state)
-    response = await c.display_friends_wishlist(tg_id=message.from_user.id, friend_user_id=friend_user_id)
+    response = await c.display_friends_wishlist(my_tg_id=message.from_user.id, friend_user_id=friend_user_id)
     await message.reply(
         text=response["text"],
         reply_markup=response["markup"],
@@ -240,6 +240,7 @@ async def reserve_wish_process(query: types.CallbackQuery, state: FSMContext, ca
     tg_id = query.from_user.id
     await c.reserve_wish(wish_id=callback_data['wish_id'], tg_id=tg_id)
     response = await c.display_wishes_reserved_by_me(tg_id=tg_id, state=state)
+    response['text'] = '<b>Подарок успешно забронирован!</b>\n\n' + response['text']
     await bot.send_message(chat_id=tg_id,
                         text=response['text'],
                         reply_markup=response['markup'])

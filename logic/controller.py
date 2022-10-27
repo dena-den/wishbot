@@ -101,14 +101,15 @@ class Controller:
         wishes = self.db.get_wishes_by_tg_id(tg_id=tg_id)
         for wish in wishes:
             wish_id = wish.pop('id')
-            if wish['is_reserved']:
-                wish['is_reserved'] = '🔒'
-                delete_wish_markup = markups.delete_wish_button(wish_id=wish_id, delete_button_enabled=0)
-            else:
-                wish['is_reserved'] = '🆓'
-                delete_wish_markup = markups.delete_wish_button(wish_id=wish_id, delete_button_enabled=1)
+            delete_button_disabled = bool(wish['is_reserved'])
+            add_link_button_disabled = bool(wish['product_link'])
+            wish['is_reserved'] = '🔒'if wish['is_reserved'] else '🆓'
+            delete_wish_markup = markups.delete_wish_button(
+                wish_id=wish_id,
+                delete_button_disabled=delete_button_disabled,
+                add_link_button_disabled=add_link_button_disabled
+            )
             text = "\n".join([str(row) for row in wish.values() if row])
-            logging.info(f'LOOK: {tg_id}, {text}, {delete_wish_markup}')
             await self.bot.send_message(chat_id=tg_id,
                                 text=text,
                                 reply_markup=delete_wish_markup,
@@ -147,7 +148,7 @@ class Controller:
 
     async def input_wish_link(self, state, wish_id):
         text = 'Вставьте ссылку, которую хотите добавить'
-        markup = markups.back_to_markup(to='wishlist')
+        markup = markups.back_to_markup(to='start')
         await state.set_state(states.Wish.wish_link_to_add)
         async with state.proxy() as data:
             data['wish_id'] = wish_id
@@ -190,24 +191,36 @@ class Controller:
             friend_user_id = self.db.get_user_id_by_phone(phone=message.text)
         return friend_user_id
 
-    async def display_friends_wishlist(self, tg_id, friend_user_id):        
+    async def display_friends_wishlist(self, my_tg_id, friend_user_id):
+        number_of_wishes_reserved_by_me = self.db.how_many_wishes_are_reserved(
+            friend_user_id=friend_user_id,
+            my_tg_id=my_tg_id
+        )
         wishes = self.db.get_available_wishes_by_user_id(user_id=friend_user_id)
         for wish in wishes:
             wish_id = wish.pop('id')
             text = "\n".join([str(row) for row in wish.values() if row])
-            reserve_wish_markup = markups.reserve_wish_button(wish_id=wish_id)
-            await self.bot.send_message(chat_id=tg_id,
+            if number_of_wishes_reserved_by_me < 2:
+                reserve_wish_markup = markups.reserve_wish_button(wish_id=wish_id)
+            else:
+                reserve_wish_markup = None
+            await self.bot.send_message(chat_id=my_tg_id,
                                 text=text,
                                 reply_markup=reserve_wish_markup,
                                 parse_mode='HTML')
         user_info = self.db.get_user_info_by_user_id(user_id=friend_user_id)
         text = f'Это список подарков твоего друга {user_info["name"]}.\n' \
                f'Его день рождения: {user_info["birthdate"]}'
+        if number_of_wishes_reserved_by_me >= 2:
+            text += f'\n\n<b>Ты уже выбрал 2 подарка для этого друга. ' \
+                    f'Оставь другим.</b>'
         markup = markups.friend_wishlist_markup()
         return dict(text=text, markup=markup)
 
     async def reserve_wish(self, wish_id, tg_id):
         self.db.reserve_wish(wish_id=wish_id, tg_id_who_chose=tg_id)
+
+
 
 """
     async def message_main_menu_buttons_click(self, message):

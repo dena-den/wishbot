@@ -12,3 +12,13 @@ QUERY_WISHES_RESERVED_BY_ME = """
         JOIN users u ON u.id = wl.user_id 
     WHERE CONVERT_TZ(NOW(),'+00:00','+03:00') BETWEEN wh.start_datetime AND IFNULL(wh.end_datetime , STR_TO_DATE('01-01-2099', '%d-%m-%Y'))
 """
+
+
+QUERY_HOW_MANY_WISHES_ARE_RESERVED = """
+  SELECT COUNT(1) AS `count`
+  FROM wish_histories wh 
+    JOIN wishlists w ON w.id = wh.wish_id 
+    				AND w.user_id = {friend_user_id}
+    				AND wh.end_datetime IS NULL
+  WHERE wh.tg_id_who_chose = {my_tg_id}
+"""

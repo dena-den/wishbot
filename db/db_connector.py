@@ -35,6 +35,15 @@ class Database:
                     .scalar()
                 return query
 
+    def get_tg_id_by_user_id(self, user_id):
+        with self.session() as session:
+            with session.begin():
+                query = session \
+                    .execute(select(User.tg_id) \
+                    .where(User.id.__eq__(user_id))) \
+                    .scalar()
+                return query
+
     def get_user_id_by_phone(self, phone):
         with self.session() as session:
             with session.begin():
@@ -133,6 +142,16 @@ class Database:
                 session.query(Wishlist)\
                 .where(Wishlist.id.__eq__(wish_id))\
                 .update({Wishlist.is_active: 0})
+
+    def how_many_wishes_are_reserved(self, friend_user_id, my_tg_id):
+        with self.session() as session:
+            with session.begin():
+                number_of_wishes = session \
+                    .execute(QUERY_HOW_MANY_WISHES_ARE_RESERVED.format(
+                        friend_user_id=friend_user_id,
+                        my_tg_id=my_tg_id
+                    )).scalar()
+                return number_of_wishes
 
     def reserve_wish(self, wish_id, tg_id_who_chose):
         with self.session() as session:
