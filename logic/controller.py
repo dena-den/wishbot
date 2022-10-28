@@ -9,7 +9,7 @@ from logic import utils
 import logging
 from const.consts import *
 from logic import memory
-from random import randint
+from random import randint, random
 
 
 class Controller:
@@ -23,6 +23,7 @@ class Controller:
 
     async def command_start(self, message, state):
         await state.finish()
+        self.db.add_empty_keyboard_hash(tg_id=message.from_user.id)
         name = message.from_user.first_name
         text = f"Привет, {name}!"
         is_user_exist = self.db.is_user_exist(tg_id=message.from_user.id)
@@ -118,6 +119,8 @@ class Controller:
 
     async def display_my_wishlist(self, tg_id, state):
         await state.finish()
+        hashed = hash(random())
+        self.db.update_keyboard_hash(tg_id=tg_id, hashed=hashed)
         wishes = self.db.get_wishes_by_tg_id(tg_id=tg_id)
         for wish in wishes:
             wish_id = wish.pop('id')
@@ -126,6 +129,7 @@ class Controller:
             wish['is_reserved'] = '🔒' if wish['is_reserved'] else '🆓'
             delete_wish_markup = markups.delete_wish_button(
                 wish_id=wish_id,
+                hashed=hashed,
                 delete_button_disabled=delete_button_disabled,
                 add_link_button_disabled=add_link_button_disabled
             )
@@ -146,6 +150,10 @@ class Controller:
         markup = markups.back_to_markup(to='wishlist')
         await state.set_state(states.Wish.wish_name_to_add)
         return dict(text=text, markup=markup)
+
+    async def get_keyboard_hash(self, tg_id):
+        hashed = self.db.get_keyboard_hash(tg_id=tg_id)
+        return hashed
 
     async def check_is_user_exist(self, tg_id):
         is_user_exist = self.db.is_user_exist(tg_id=tg_id)
@@ -181,11 +189,16 @@ class Controller:
 
     async def display_wishes_reserved_by_me(self, tg_id, state):
         await state.finish()
+        hashed = hash(random())
+        self.db.update_keyboard_hash(tg_id=tg_id, hashed=hashed)
         wishes = self.db.get_wishes_reserved_by_me(tg_id=tg_id)
         for wish in wishes:
             wish_id = wish.pop('id')
             text = "\n".join([str(row) for row in wish.values() if row])
-            unreserve_wish_markup = markups.unreserve_wish_button(wish_id=wish_id)
+            unreserve_wish_markup = markups.unreserve_wish_button(
+                wish_id=wish_id,
+                hashed=hashed
+            )
             await self.bot.send_message(chat_id=tg_id,
                                 text=text,
                                 reply_markup=unreserve_wish_markup,
@@ -212,6 +225,8 @@ class Controller:
         return friend_user_id
 
     async def display_friends_wishlist(self, my_tg_id, friend_user_id):
+        hashed = hash(random())
+        self.db.update_keyboard_hash(tg_id=my_tg_id, hashed=hashed)
         number_of_wishes_reserved_by_me = self.db.how_many_wishes_are_reserved(
             friend_user_id=friend_user_id,
             my_tg_id=my_tg_id
@@ -221,7 +236,10 @@ class Controller:
             wish_id = wish.pop('id')
             text = "\n".join([str(row) for row in wish.values() if row])
             if number_of_wishes_reserved_by_me < 2:
-                reserve_wish_markup = markups.reserve_wish_button(wish_id=wish_id)
+                reserve_wish_markup = markups.reserve_wish_button(
+                    wish_id=wish_id,
+                    hashed=hashed
+                )
             else:
                 reserve_wish_markup = None
             await self.bot.send_message(chat_id=my_tg_id,

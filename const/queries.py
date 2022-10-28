@@ -22,3 +22,9 @@ QUERY_HOW_MANY_WISHES_ARE_RESERVED = """
     				AND wh.end_datetime IS NULL
   WHERE wh.tg_id_who_chose = {my_tg_id}
 """
+
+
+QUERY_UPSERT_HASH = """
+  REPLACE INTO keyboard_hash (tg_id, hash)
+  VALUES ({tg_id}, Null)
+"""

@@ -1,4 +1,3 @@
-
 def rate_limit(limit: int, key=None):
     """
     Decorator for configuring rate limit and key in different functions.

@@ -173,8 +173,12 @@ async def add_wish_process(message: types.Message, state: FSMContext):
 
 @dp.callback_query_handler(classes.WishToDelete.filter(), state='*')
 async def delete_wish_process(query: types.CallbackQuery, state: FSMContext, callback_data: dict):
-    await c.delete_wish(wish_id=callback_data['wish_id'])
     tg_id = query.from_user.id
+    db_hash = await c.get_keyboard_hash(tg_id=tg_id)
+    received_hash = int(callback_data['hashed'])
+    if db_hash != received_hash:
+        return
+    await c.delete_wish(wish_id=callback_data['wish_id'])
     deleted_wish_name = await c.get_wish_name(wish_id=callback_data['wish_id'])
     response = await c.display_my_wishlist(tg_id=tg_id, state=state)
     response['text'] = f'Подарок "{deleted_wish_name}" удален.'
@@ -185,6 +189,11 @@ async def delete_wish_process(query: types.CallbackQuery, state: FSMContext, cal
 
 @dp.callback_query_handler(classes.AddLink.filter(), state='*')
 async def input_wish_link_process(query: types.CallbackQuery, state: FSMContext, callback_data: dict):
+    tg_id = query.from_user.id
+    db_hash = await c.get_keyboard_hash(tg_id=tg_id)
+    received_hash = int(callback_data['hashed'])
+    if db_hash != received_hash:
+        return
     response = await c.input_wish_link(state=state, wish_id=callback_data['wish_id'])
     await bot.send_message(chat_id=query.from_user.id,
                            text=response['text'],
@@ -246,6 +255,10 @@ async def display_friends_wishlist_process(message: types.Message, state: FSMCon
 @dp.callback_query_handler(classes.WishToReserve.filter(), state='*')
 async def reserve_wish_process(query: types.CallbackQuery, state: FSMContext, callback_data: dict):
     tg_id = query.from_user.id
+    db_hash = await c.get_keyboard_hash(tg_id=tg_id)
+    received_hash = int(callback_data['hashed'])
+    if db_hash != received_hash:
+        return
     await c.reserve_wish(wish_id=callback_data['wish_id'], tg_id=tg_id)
     response = await c.display_wishes_reserved_by_me(tg_id=tg_id, state=state)
     response['text'] = '<b>Подарок успешно забронирован!</b>\n\n' + response['text']
@@ -258,6 +271,10 @@ async def reserve_wish_process(query: types.CallbackQuery, state: FSMContext, ca
 @dp.callback_query_handler(classes.WishToUnreserve.filter(), state='*')
 async def unreserve_wish_process(query: types.CallbackQuery, state: FSMContext, callback_data: dict):
     tg_id = query.from_user.id
+    db_hash = await c.get_keyboard_hash(tg_id=tg_id)
+    received_hash = int(callback_data['hashed'])
+    if db_hash != received_hash:
+        return
     await c.unreserve_wish(wish_id=callback_data['wish_id'], tg_id=tg_id)
     response = await c.display_wishes_reserved_by_me(tg_id=tg_id, state=state)
     await bot.send_message(chat_id=tg_id,

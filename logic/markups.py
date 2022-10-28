@@ -42,6 +42,7 @@ def my_wishlist_markup():
 
 
 def delete_wish_button(wish_id: int,
+                       hashed: int, 
                        delete_button_disabled: bool,
                        add_link_button_disabled: bool):
     markup = types.InlineKeyboardMarkup()
@@ -49,33 +50,41 @@ def delete_wish_button(wish_id: int,
         markup.add(types.InlineKeyboardButton(
             'Удалить',
             callback_data=classes.WishToDelete.new(
-                wish_id=wish_id
+                wish_id=wish_id,
+                hashed=hashed
             )
         ))
     if not add_link_button_disabled:
-        markup.add(types.InlineKeyboardButton(
+        markup.insert(types.InlineKeyboardButton(
                 'Добавить ссылку',
                 callback_data=classes.AddLink.new(
-                    wish_id=wish_id
+                    wish_id=wish_id,
+                    hashed=hashed
                 )
             ))
     return markup
 
 
-def reserve_wish_button(wish_id: int):
+def reserve_wish_button(wish_id: int, hashed: int):
     markup = types.InlineKeyboardMarkup()
     markup.add(types.InlineKeyboardButton(
         'Забронировать',
-        callback_data=classes.WishToReserve.new(wish_id=wish_id)
+        callback_data=classes.WishToReserve.new(
+            wish_id=wish_id,
+            hashed=hashed
+        )
     ))
     return markup
 
 
-def unreserve_wish_button(wish_id: int):
+def unreserve_wish_button(wish_id: int, hashed: int):
     markup = types.InlineKeyboardMarkup()
     markup.add(types.InlineKeyboardButton(
         'Отменить',
-        callback_data=classes.WishToUnreserve.new(wish_id=wish_id)
+        callback_data=classes.WishToUnreserve.new(
+            wish_id=wish_id,
+            hashed=hashed
+        )
     ))
     return markup
 

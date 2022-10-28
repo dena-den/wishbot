@@ -7,6 +7,7 @@ from sqlalchemy import select, Column, Integer, String, ForeignKey, Boolean, Dat
 from const.queries import *
 from logic.utils import get_moscow_datetime
 from logic import memory
+from sqlalchemy.dialects.mysql import insert
 
 
 class Database:
@@ -21,6 +22,27 @@ class Database:
                     .execute(select(User.id)) \
                     .fetchall()
                 return [row['id'] for row in query if query]
+
+    def add_empty_keyboard_hash(self, tg_id):
+        with self.session() as session:
+            with session.begin():
+                session.execute(QUERY_UPSERT_HASH.format(tg_id=tg_id))
+
+    def update_keyboard_hash(self, tg_id, hashed):
+        with self.session() as session:
+            with session.begin():
+                session.query(KeyboardHash)\
+                    .where(KeyboardHash.tg_id.__eq__(tg_id))\
+                    .update({KeyboardHash.hash: hashed})
+
+    def get_keyboard_hash(self, tg_id):
+        with self.session() as session:
+            with session.begin():
+                query = session \
+                    .execute(select(KeyboardHash.hash) \
+                    .where(KeyboardHash.tg_id.__eq__(tg_id))) \
+                    .scalar()
+                return query
 
     def is_user_exist(self, tg_id):
         with self.session() as session:
@@ -126,15 +148,15 @@ class Database:
         with self.session() as session:
             with session.begin():
                 session.query(Wishlist)\
-                .where(Wishlist.id.__eq__(wish_id))\
-                .update({Wishlist.product_link: link})
+                    .where(Wishlist.id.__eq__(wish_id))\
+                    .update({Wishlist.product_link: link})
 
     def delete_wish(self, wish_id):
         with self.session() as session:
             with session.begin():
                 session.query(Wishlist)\
-                .where(Wishlist.id.__eq__(wish_id))\
-                .update({Wishlist.is_active: 0})
+                    .where(Wishlist.id.__eq__(wish_id))\
+                    .update({Wishlist.is_active: 0})
 
     def how_many_wishes_are_reserved(self, friend_user_id, my_tg_id):
         with self.session() as session:
@@ -150,8 +172,8 @@ class Database:
         with self.session() as session:
             with session.begin():
                 session.query(Wishlist)\
-                .where(Wishlist.id.__eq__(wish_id))\
-                .update({Wishlist.is_reserved: 1})
+                    .where(Wishlist.id.__eq__(wish_id))\
+                    .update({Wishlist.is_reserved: 1})
 
                 data = WishHistory(
                     wish_id=wish_id,
@@ -163,10 +185,10 @@ class Database:
         with self.session() as session:
             with session.begin():
                 session.query(WishHistory)\
-                .where(and_(WishHistory.wish_id.__eq__(wish_id),
-                            WishHistory.tg_id_who_chose.__eq__(tg_id_who_chose)))\
-                .update({WishHistory.end_datetime: get_moscow_datetime()})
+                    .where(and_(WishHistory.wish_id.__eq__(wish_id),
+                                WishHistory.tg_id_who_chose.__eq__(tg_id_who_chose)))\
+                    .update({WishHistory.end_datetime: get_moscow_datetime()})
 
                 session.query(Wishlist)\
-                .where(Wishlist.id.__eq__(wish_id))\
-                .update({Wishlist.is_reserved: 0})
+                    .where(Wishlist.id.__eq__(wish_id))\
+                    .update({Wishlist.is_reserved: 0})

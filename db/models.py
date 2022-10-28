@@ -36,3 +36,9 @@ class WishHistory(Base):
     wish_id = Column(Integer, ForeignKey("wishlists.id"), nullable=False)
     start_datetime = Column(DateTime, default=get_moscow_datetime())
     end_datetime = Column(DateTime, default=None)
+
+
+class KeyboardHash(Base):
+    __tablename__ = "keyboard_hash"
+    tg_id = Column(BigInteger, primary_key=True)
+    hash = Column(BigInteger, nullable=True)
