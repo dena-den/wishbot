@@ -40,7 +40,7 @@ async def command_start_process(message: types.Message, state: FSMContext):
 
 
 @dp.message_handler(commands='instruction', state='*')
-@dp.message_handler(Text(equals='Инструкция к пользованию'), state='*')
+@dp.message_handler(Text(equals='Как со мной общаться?'), state='*')
 async def get_instruction_process(message: types.Message):
     response = await c.get_instruction()
     await message.reply(
@@ -51,7 +51,7 @@ async def get_instruction_process(message: types.Message):
     )
 
 
-@dp.message_handler(Text(equals='Создать мой список подарков'), state='*')
+@dp.message_handler(Text(equals='Создать мой список желаний'), state='*')
 @dp.message_handler(Text(equals='Назад к вводу имени'), state='*')
 async def enter_name_process(message: types.Message, state: FSMContext):
     is_user_exist = await c.check_is_user_exist(tg_id=message.from_user.id)
@@ -126,9 +126,9 @@ async def check_data_no_phone_process(message: types.Message, state: FSMContext)
 
 
 @dp.message_handler(commands='my_wishes', state='*')
-@dp.message_handler(Text(equals='Открыть мой список подарков'), state='*')
+@dp.message_handler(Text(equals='Открыть мой список желаний'), state='*')
 @dp.message_handler(Text(equals='Все правильно'), state=states.User.phone)
-@dp.message_handler(Text(equals='Назад к списку'), state=states.Wish.wish_name_to_add)
+@dp.message_handler(Text(equals='Назад к списку'), state='*')
 async def display_my_wishlist_process(message: types.Message, state: FSMContext):
     if message.text == 'Все правильно':
         await c.add_user_to_db(message=message, state=state)
@@ -147,7 +147,7 @@ async def display_my_wishlist_process(message: types.Message, state: FSMContext)
     )
 
 
-@dp.message_handler(Text(equals='Добавить подарок'))
+@dp.message_handler(Text(equals='Добавить желание'))
 async def enter_wish_name_process(message: types.Message, state: FSMContext):
     response = await c.enter_wish_name(message=message, state=state)
     await message.reply(
@@ -161,7 +161,31 @@ async def enter_wish_name_process(message: types.Message, state: FSMContext):
 @dp.message_handler(lambda msg: not msg.text.startswith(('Назад', '/')),
                     state=states.Wish.wish_name_to_add)
 async def add_wish_process(message: types.Message, state: FSMContext):
-    await c.add_wish(message=message, state=state)
+    await c.add_wish(message=message, state=state, is_list_of_wishes=0)
+    response = await c.display_my_wishlist(tg_id=message.from_user.id, state=state)
+    await message.reply(
+        text=response["text"],
+        reply_markup=response["markup"],
+        parse_mode="HTML",
+        reply=False
+    )
+
+
+@dp.message_handler(Text(equals='Добавить желания списком'))
+async def enter_list_wish_name_process(message: types.Message, state: FSMContext):
+    response = await c.enter_list_wish_name(message=message, state=state)
+    await message.reply(
+        text=response["text"],
+        reply_markup=response["markup"],
+        parse_mode="HTML",
+        reply=False
+    )
+
+
+@dp.message_handler(lambda msg: not msg.text.startswith(('Назад', '/')),
+                    state=states.Wish.wish_names_to_add)
+async def add_wish_list_process(message: types.Message, state: FSMContext):
+    await c.add_wish(message=message, state=state, is_list_of_wishes=1)
     response = await c.display_my_wishlist(tg_id=message.from_user.id, state=state)
     await message.reply(
         text=response["text"],

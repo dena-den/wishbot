@@ -6,12 +6,12 @@ from logic import utils
 def start_menu_markup(is_user_exist: int):
     markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
     if is_user_exist:
-        markup.insert(types.KeyboardButton("Открыть мой список подарков"))
+        markup.insert(types.KeyboardButton("Открыть мой список желаний"))
     else:
-        markup.insert(types.KeyboardButton("Создать мой список подарков"))
-    markup.insert(types.KeyboardButton("Забронированные мною подарки"))
-    markup.insert(types.KeyboardButton("Инструкция к пользованию"))
+        markup.insert(types.KeyboardButton("Создать мой список желаний"))
+    markup.insert(types.KeyboardButton("Как со мной общаться?"))
     markup.insert(types.KeyboardButton("Выбрать подарок другу"))
+    markup.insert(types.KeyboardButton("Забронированные мною подарки"))
     return markup
 
 
@@ -36,7 +36,8 @@ def back_to_markup(to: str):
 
 def my_wishlist_markup():
     markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
-    markup.insert(types.KeyboardButton("Добавить подарок"))
+    markup.insert(types.KeyboardButton("Добавить желание"))
+    markup.insert(types.KeyboardButton("Добавить желания списком"))
     markup.insert(types.KeyboardButton("Назад в стартовое меню"))
     return markup
 
@@ -68,7 +69,7 @@ def delete_wish_button(wish_id: int,
 def reserve_wish_button(wish_id: int, hashed: int):
     markup = types.InlineKeyboardMarkup()
     markup.add(types.InlineKeyboardButton(
-        'Забронировать',
+        'Выбрать подарок',
         callback_data=classes.WishToReserve.new(
             wish_id=wish_id,
             hashed=hashed
@@ -80,7 +81,7 @@ def reserve_wish_button(wish_id: int, hashed: int):
 def unreserve_wish_button(wish_id: int, hashed: int):
     markup = types.InlineKeyboardMarkup()
     markup.add(types.InlineKeyboardButton(
-        'Отменить',
+        'Отменить выбор',
         callback_data=classes.WishToUnreserve.new(
             wish_id=wish_id,
             hashed=hashed

@@ -101,4 +101,4 @@ cython_debug/
 
 # Other files
 test.py
-history/
+trash/

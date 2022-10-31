@@ -25,8 +25,11 @@ class Controller:
         await state.finish()
         self.db.add_empty_keyboard_hash(tg_id=message.from_user.id)
         name = message.from_user.first_name
-        text = f"Привет, {name}!"
         is_user_exist = self.db.is_user_exist(tg_id=message.from_user.id)
+        if is_user_exist:
+            text = START.format(name=name)
+        else:
+            text = START_FOR_NEWBIES.format(name=name)
         markup = markups.start_menu_markup(is_user_exist=is_user_exist)
         return dict(text=text, markup=markup)
 
@@ -122,6 +125,12 @@ class Controller:
         hashed = hash(random())
         self.db.update_keyboard_hash(tg_id=tg_id, hashed=hashed)
         wishes = self.db.get_wishes_by_tg_id(tg_id=tg_id)
+        if wishes:
+            text = '<b>Это твой список желаний</b>\n⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇'
+            await self.bot.send_message(chat_id=tg_id,
+                    text=text,
+                    reply_markup=None,
+                    parse_mode='HTML')
         for wish in wishes:
             wish_id = wish.pop('id')
             delete_button_disabled = bool(wish['is_reserved'])
@@ -138,17 +147,30 @@ class Controller:
                                 text=text,
                                 reply_markup=delete_wish_markup,
                                 parse_mode='HTML')
+        user_id = self.db.get_user_id_by_tg_id(tg_id=tg_id)
         if wishes:
-            text = 'Это твой список подарков.'
+            text = '⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️\n\n' \
+                   'Ты можешь добавлять желания по одному или сразу списком.\n' \
+                   '🆓 - желание еще свободно, 🔒 - уже выбрано твоим другом.\n\n' \
+                  f'Твой уникальный код: <b>{user_id}</b> - поделись им с друзьями.'
         else:
-            text = 'Твой список подарков пуст. Их можно добавить с помощью кнопки ниже.'
+            text = 'Твой список желаний пуст. Их можно добавить с помощью кнопок ниже.\n\n'\
+                  f'Твой уникальный код: <b>{user_id}</b> - поделись им с друзьями.'
         markup = markups.my_wishlist_markup()
         return dict(text=text, markup=markup)
 
     async def enter_wish_name(self, message, state):
-        text = 'Введите описание подарка'
+        text = '<b>Опиши своё желание подробнее, чтобы друзья точно понимали, что ты хочешь.</b>\n\n' \
+               'Например, <i>Книга "Гарри Поттер и философский камень"</i>'
         markup = markups.back_to_markup(to='wishlist')
         await state.set_state(states.Wish.wish_name_to_add)
+        return dict(text=text, markup=markup)
+
+    async def enter_list_wish_name(self, message, state):
+        text = 'Введи несколько желаний, каждое с новой строки.\n\n' \
+               'Например,\n<i>Вертолетик на радиоуправлении\nСкейтборд\nКонструктор LEGO</i>'
+        markup = markups.back_to_markup(to='wishlist')
+        await state.set_state(states.Wish.wish_names_to_add)
         return dict(text=text, markup=markup)
 
     async def get_keyboard_hash(self, tg_id):
@@ -163,13 +185,18 @@ class Controller:
         wish_name = self.db.get_wish_name_by_id(wish_id=wish_id)
         return wish_name
 
-    async def add_wish(self, message, state):
+    async def add_wish(self, message, state, is_list_of_wishes):
         user_id = self.db.get_user_id_by_tg_id(tg_id=message.from_user.id)
-        wishlist_data = dict(
-            user_id=user_id,
-            name=message.text
-        )
-        self.db.add_wish(wishlist_data=wishlist_data)
+        if is_list_of_wishes:
+            wishes = message.text.split('\n')
+        else:
+            wishes = [message.text]
+        for wish in wishes:
+            wishlist_data = dict(
+                user_id=user_id,
+                name=wish
+            )
+            self.db.add_wish(wishlist_data=wishlist_data)
 
     async def delete_wish(self, wish_id):
         self.db.delete_wish(wish_id=wish_id)
