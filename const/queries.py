@@ -2,7 +2,6 @@ QUERY_WISHES_RESERVED_BY_ME = """
     SELECT 
       wl.id
     , wl.name AS wish_name
-    , wl.image_link
     , wl.product_link
     , u.name AS username
     , u.birthdate 

@@ -266,8 +266,19 @@ async def enter_friends_code_process(message: types.Message, state: FSMContext):
 @dp.message_handler(lambda msg: not msg.text.startswith(('Назад', '/')),
                     state=states.Friend.friend_code)
 async def display_friends_wishlist_process(message: types.Message, state: FSMContext):
-    friend_user_id = await c.get_friend_user_id(message=message, state=state)
-    response = await c.display_friends_wishlist(my_tg_id=message.from_user.id, friend_user_id=friend_user_id)
+    try:
+        friend_user_id = await c.get_friend_user_id(message=message, state=state)
+        response = await c.display_friends_wishlist(my_tg_id=message.from_user.id, friend_user_id=friend_user_id)
+    except classes.ProhibitedSymbols:
+        response = dict(
+            text='Код состоит только из цифр. Буквы отсутствуют! Попробуй еще раз.',
+            markup=markups.back_to_markup(to='start')
+        )
+    except classes.UserNotFound:
+        response = dict(
+            text='Пользователя с таким кодом не найдено. Ничего не перепутал? Попробуй еще раз.',
+            markup=markups.back_to_markup(to='start')
+        )
     await message.reply(
         text=response["text"],
         reply_markup=response["markup"],
@@ -285,7 +296,6 @@ async def reserve_wish_process(query: types.CallbackQuery, state: FSMContext, ca
         return
     await c.reserve_wish(wish_id=callback_data['wish_id'], tg_id=tg_id)
     response = await c.display_wishes_reserved_by_me(tg_id=tg_id, state=state)
-    response['text'] = '<b>Подарок успешно забронирован!</b>\n\n' + response['text']
     await bot.send_message(chat_id=tg_id,
                         text=response['text'],
                         reply_markup=response['markup'],

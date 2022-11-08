@@ -2,6 +2,7 @@ from pytz import timezone
 from datetime import datetime
 from random import randint
 import re
+from const import classes
 
 
 class Dict(dict):
@@ -18,8 +19,8 @@ def get_moscow_datetime():
 
 
 def birthdate_processing(input: str):
-    birthdate_pattern = r'[a-zA-ZёЁа-яА-Я]'
-    if re.search(birthdate_pattern, input):
+    prohibited_symbols = r'[a-zA-ZёЁа-яА-Я]'
+    if re.search(prohibited_symbols, input):
         return False
     numbers_pattern = r'[0-9]'
     birthdate_numbers = ''.join(re.findall(numbers_pattern, input))
@@ -30,3 +31,12 @@ def birthdate_processing(input: str):
     except ValueError:
         return False
     return birthdate
+
+
+def code_processing(input: str):
+    prohibited_symbols = r'[a-zA-ZёЁа-яА-Я]'
+    if re.search(prohibited_symbols, input):
+        raise classes.ProhibitedSymbols
+    numbers_pattern = r'[0-9]'
+    code_numbers = ''.join(re.findall(numbers_pattern, input))
+    return code_numbers

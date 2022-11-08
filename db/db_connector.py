@@ -44,12 +44,21 @@ class Database:
                     .scalar()
                 return query
 
-    def is_user_exist(self, tg_id):
+    def is_user_exist_by_tg_id(self, tg_id):
         with self.session() as session:
             with session.begin():
                 query = session \
                     .execute(select(User.id) \
                     .where(User.tg_id.__eq__(tg_id))) \
+                    .scalar()
+                return bool(query)
+
+    def is_user_exist_by_user_id(self, user_id):
+        with self.session() as session:
+            with session.begin():
+                query = session \
+                    .execute(select(User.id) \
+                    .where(User.id.__eq__(user_id))) \
                     .scalar()
                 return bool(query)
 
