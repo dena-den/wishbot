@@ -1,12 +1,12 @@
 import sqlalchemy
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.sql.elements import and_, or_
-from .models import *
+from app.db.models import *
 from os import getenv
 from sqlalchemy import select, Column, Integer, String, ForeignKey, Boolean, DateTime, SmallInteger, Text, DECIMAL, text, func
-from const.queries import *
-from logic.utils import get_moscow_datetime
-from logic import memory
+from app.const.queries import *
+from app.logic.utils import get_moscow_datetime
+from app.logic import memory
 from sqlalchemy.dialects.mysql import insert
 
 
@@ -89,6 +89,15 @@ class Database:
                     .scalar()
                 return query
 
+    def get_phone_by_user_id(self, user_id):
+        with self.session() as session:
+            with session.begin():
+                query = session \
+                    .execute(select(User.phone) \
+                    .where(User.id.__eq__(user_id))) \
+                    .scalar()
+                return query if query else None
+
     def get_user_info_by_user_id(self, user_id):
         with self.session() as session:
             with session.begin():
@@ -115,7 +124,7 @@ class Database:
                     .where(User.tg_id.__eq__(tg_id))) \
                     .scalar()
                 query = session \
-                    .execute(select(Wishlist.id, Wishlist.name, Wishlist.image_link, Wishlist.product_link, Wishlist.is_reserved) \
+                    .execute(select(Wishlist.id, Wishlist.name, Wishlist.product_link, Wishlist.is_reserved) \
                     .where(and_(Wishlist.user_id.__eq__(user_id), Wishlist.is_active.__eq__(1)))) \
                     .fetchall()
                 return [dict(row) for row in query if query]
@@ -124,7 +133,7 @@ class Database:
         with self.session() as session:
             with session.begin():
                 query = session \
-                    .execute(select(Wishlist.id, Wishlist.name, Wishlist.image_link, Wishlist.product_link) \
+                    .execute(select(Wishlist.id, Wishlist.name, Wishlist.product_link) \
                     .where(and_(Wishlist.user_id.__eq__(user_id),
                                 Wishlist.is_active.__eq__(1),
                                 Wishlist.is_reserved.__eq__(0)))) \

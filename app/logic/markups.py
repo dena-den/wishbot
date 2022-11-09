@@ -1,6 +1,5 @@
 from aiogram import types
-from const import classes
-from logic import utils
+from app.const import classes
 
 
 def start_menu_markup(is_user_exist: int):
@@ -44,8 +43,7 @@ def my_wishlist_markup():
 
 def delete_wish_button(wish_id: int,
                        hashed: int, 
-                       delete_button_disabled: bool,
-                       add_link_button_disabled: bool):
+                       delete_button_disabled: bool):
     markup = types.InlineKeyboardMarkup()
     if not delete_button_disabled:
         markup.add(types.InlineKeyboardButton(
@@ -55,8 +53,7 @@ def delete_wish_button(wish_id: int,
                 hashed=hashed
             )
         ))
-    if not add_link_button_disabled:
-        markup.insert(types.InlineKeyboardButton(
+    markup.insert(types.InlineKeyboardButton(
                 'Добавить ссылку',
                 callback_data=classes.AddLink.new(
                     wish_id=wish_id,

@@ -1,12 +1,12 @@
-from db.db_connector import Database
-from const.queries import *
-from . import markups
-from const import states, classes
+from app.db.db_connector import Database
+from app.const.queries import *
+from app.logic import markups
+from app.const import states, classes
 import re
-from logic import utils
+from app.logic import utils
 import logging
-from const.consts import *
-from logic import memory
+from app.const.consts import *
+from app.logic import memory
 from random import randint, random
 
 
@@ -125,6 +125,11 @@ class Controller:
         hashed = hash(random())
         self.db.update_keyboard_hash(tg_id=tg_id, hashed=hashed)
         user_id = self.db.get_user_id_by_tg_id(tg_id=tg_id) 
+        phone_number = self.db.get_phone_by_user_id(user_id=user_id)
+        if phone_number:
+            phone_code = f'А еще, вместо кода можно использовать твой номер телефона <b>{phone_number}</b>'
+        else:
+            phone_code = ''  
         wishes = self.db.get_wishes_by_tg_id(tg_id=tg_id)
         if wishes:
             text = WISHES_TOP
@@ -135,22 +140,27 @@ class Controller:
             for wish in wishes:
                 wish_id = wish.pop('id')
                 delete_button_disabled = bool(wish['is_reserved'])
-                add_link_button_disabled = bool(wish['product_link'])
-                wish['is_reserved'] = '🔒' if wish['is_reserved'] else '🆓'
+                if wish['is_reserved']:
+                    wish['is_reserved'] = '🔒 - подарок уже выбран твоим другом'
+                else:
+                    wish['is_reserved'] = '🆓 - этот подарок еще свободен'
                 delete_wish_markup = markups.delete_wish_button(
                     wish_id=wish_id,
                     hashed=hashed,
-                    delete_button_disabled=delete_button_disabled,
-                    add_link_button_disabled=add_link_button_disabled
+                    delete_button_disabled=delete_button_disabled
                 )
-                text = "\n".join([str(row) for row in wish.values() if row])
+                text = MY_WISH.format(
+                    wish_name=wish['name'],
+                    product_link=wish['product_link'] + '\n' if wish['product_link'] else '',
+                    is_reserved=wish['is_reserved']
+                )
                 await self.bot.send_message(chat_id=tg_id,
                                     text=text,
                                     reply_markup=delete_wish_markup,
-                                    parse_mode='HTML')       
-            text = MY_WISHES_BOTTOM.format(user_id=user_id)
+                                    parse_mode='HTML')  
+            text = MY_WISHES_BOTTOM.format(user_id=user_id, phone_code=phone_code)
         else:
-            text = MY_WISHES_EMPTY_BOTTOM.format(user_id=user_id)
+            text = MY_WISHES_EMPTY_BOTTOM.format(user_id=user_id, phone_code=phone_code)
         markup = markups.my_wishlist_markup()
         return dict(text=text, markup=markup)
 
@@ -280,7 +290,10 @@ class Controller:
                     parse_mode='HTML')
             for wish in wishes:
                 wish_id = wish.pop('id')
-                text = "\n".join([str(row) for row in wish.values() if row])
+                text = FRIEND_WISH.format(
+                    wish_name=wish["name"],
+                    product_link=wish["product_link"] if wish["product_link"] else ''
+                )
                 if number_of_wishes_reserved_by_me < 2:
                     reserve_wish_markup = markups.reserve_wish_button(
                         wish_id=wish_id,

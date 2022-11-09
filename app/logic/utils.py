@@ -2,7 +2,7 @@ from pytz import timezone
 from datetime import datetime
 from random import randint
 import re
-from const import classes
+from app.const import classes
 
 
 class Dict(dict):

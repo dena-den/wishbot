@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Date, Time, DateTime, Boolean, BigInteger
 from sqlalchemy.orm import declarative_base, relationship
-from logic.utils import get_moscow_datetime
+from app.logic.utils import get_moscow_datetime
 
 
 Base = declarative_base()

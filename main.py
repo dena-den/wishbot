@@ -1,7 +1,7 @@
 import logging
 from fastapi import FastAPI, Request
 from aiogram import types
-from logic.bot import dp
+from app.logic.bot import dp
 
 
 app = FastAPI()

@@ -1,5 +1,5 @@
 from aiogram import executor
-from logic.bot import dp
+from app.logic.bot import dp
 
 
 if __name__ == "__main__":
