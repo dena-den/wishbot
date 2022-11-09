@@ -7,7 +7,7 @@ from app.logic import utils
 import logging
 from app.const.consts import *
 from app.logic import memory
-from random import randint, random
+from random import randint, random, choice
 
 
 class Controller:
@@ -25,7 +25,7 @@ class Controller:
         name = message.from_user.first_name
         is_user_exist = self.db.is_user_exist_by_tg_id(tg_id=message.from_user.id)
         if is_user_exist:
-            text = START.format(name=name)
+            text = choice(START_PHRASES)
         else:
             text = START_FOR_NEWBIES.format(name=name)
         markup = markups.start_menu_markup(is_user_exist=is_user_exist)
@@ -125,11 +125,6 @@ class Controller:
         hashed = hash(random())
         self.db.update_keyboard_hash(tg_id=tg_id, hashed=hashed)
         user_id = self.db.get_user_id_by_tg_id(tg_id=tg_id) 
-        phone_number = self.db.get_phone_by_user_id(user_id=user_id)
-        if phone_number:
-            phone_code = f'А еще, вместо кода можно использовать твой номер телефона <b>{phone_number}</b>'
-        else:
-            phone_code = ''  
         wishes = self.db.get_wishes_by_tg_id(tg_id=tg_id)
         if wishes:
             text = WISHES_TOP
@@ -158,9 +153,12 @@ class Controller:
                                     text=text,
                                     reply_markup=delete_wish_markup,
                                     parse_mode='HTML')  
-            text = MY_WISHES_BOTTOM.format(user_id=user_id, phone_code=phone_code)
+            text = MY_WISHES_BOTTOM.format(user_id=user_id)
         else:
-            text = MY_WISHES_EMPTY_BOTTOM.format(user_id=user_id, phone_code=phone_code)
+            text = MY_WISHES_EMPTY_BOTTOM.format(user_id=user_id)
+        phone_number = self.db.get_phone_by_user_id(user_id=user_id)
+        if phone_number:
+            text += FIND_BY_PHONE
         markup = markups.my_wishlist_markup()
         return dict(text=text, markup=markup)
 
@@ -172,7 +170,7 @@ class Controller:
         return dict(text=text, markup=markup)
 
     async def enter_list_wish_name(self, message, state):
-        text = 'Введи несколько желаний, каждое с новой строки. ' \
+        text = 'Введи несколько желаний, каждое с новой строки (но не больше 5). ' \
                'Например:\n\n<i>Вертолетик на радиоуправлении\nСкейтборд\nКонструктор LEGO</i>'
         markup = markups.back_to_markup(to='wishlist')
         await state.set_state(states.Wish.wish_names_to_add)
@@ -196,7 +194,16 @@ class Controller:
             wishes = message.text.split('\n')
         else:
             wishes = [message.text]
-        for wish in wishes:
+        for num, wish in enumerate(wishes, start=1):
+            if num == 6:
+                text = '<b>Я принял только 5 первых подарков.</b> Остальные отправь, пожалуйста, еще раз.'
+                await self.bot.send_message(
+                    chat_id=message.from_user.id,
+                    text=text,
+                    reply_markup=None,
+                    parse_mode='HTML'
+                )
+                break
             wishlist_data = dict(
                 user_id=user_id,
                 name=wish

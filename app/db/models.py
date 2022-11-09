@@ -26,7 +26,6 @@ class Wishlist(Base):
     image_link = Column(String, nullable=True)
     product_link = Column(String, nullable=True)
     is_reserved = Column(Boolean, default=False)
-    is_active = Column(Boolean, default=True)
 
 
 class WishHistory(Base):

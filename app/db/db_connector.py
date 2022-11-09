@@ -1,13 +1,11 @@
 import sqlalchemy
 from sqlalchemy.orm import sessionmaker, scoped_session
-from sqlalchemy.sql.elements import and_, or_
+from sqlalchemy.sql.elements import and_
 from app.db.models import *
 from os import getenv
-from sqlalchemy import select, Column, Integer, String, ForeignKey, Boolean, DateTime, SmallInteger, Text, DECIMAL, text, func
+from sqlalchemy import select, delete
 from app.const.queries import *
 from app.logic.utils import get_moscow_datetime
-from app.logic import memory
-from sqlalchemy.dialects.mysql import insert
 
 
 class Database:
@@ -125,7 +123,7 @@ class Database:
                     .scalar()
                 query = session \
                     .execute(select(Wishlist.id, Wishlist.name, Wishlist.product_link, Wishlist.is_reserved) \
-                    .where(and_(Wishlist.user_id.__eq__(user_id), Wishlist.is_active.__eq__(1)))) \
+                    .where(Wishlist.user_id.__eq__(user_id))) \
                     .fetchall()
                 return [dict(row) for row in query if query]
 
@@ -135,7 +133,6 @@ class Database:
                 query = session \
                     .execute(select(Wishlist.id, Wishlist.name, Wishlist.product_link) \
                     .where(and_(Wishlist.user_id.__eq__(user_id),
-                                Wishlist.is_active.__eq__(1),
                                 Wishlist.is_reserved.__eq__(0)))) \
                     .fetchall()
                 return [dict(row) for row in query if query]
@@ -172,9 +169,8 @@ class Database:
     def delete_wish(self, wish_id):
         with self.session() as session:
             with session.begin():
-                session.query(Wishlist)\
-                    .where(Wishlist.id.__eq__(wish_id))\
-                    .update({Wishlist.is_active: 0})
+                session.execute(delete(Wishlist) \
+                    .where(Wishlist.id.__eq__(wish_id)))
 
     def how_many_wishes_are_reserved(self, friend_user_id, my_tg_id):
         with self.session() as session:
