@@ -15,6 +15,6 @@ COPY /main.py ./main.py
 
 RUN adduser --disabled-password --no-create-home app
 
-ENV PATH="/.venv/bin:$PATH"
+ENV PYTHONPATH=/:/api
 
 USER app

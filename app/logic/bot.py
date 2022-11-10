@@ -254,7 +254,7 @@ async def add_wish_link_process(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands='reserved_wishes', state='*')
 @dp.message_handler(Text(equals='Забронированные мною подарки'), state='*')
-@rate_limit(1)
+@rate_limit(1, 'key')
 async def display_wishes_reserved_by_me_process(message: types.Message, state: FSMContext):
     tg_id = message.from_user.id
     response = await c.display_wishes_reserved_by_me(tg_id=tg_id, state=state)
