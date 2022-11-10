@@ -208,7 +208,7 @@ async def add_wish_list_process(message: types.Message, state: FSMContext):
 @dp.callback_query_handler(classes.WishToDelete.filter(), state='*')
 @rate_limit(1)
 async def delete_wish_process(query: types.CallbackQuery, state: FSMContext, callback_data: dict):
-    await query.answer()
+    await query.answer('Подарок удален')
     tg_id = query.from_user.id
     db_hash = await c.get_keyboard_hash(tg_id=tg_id)
     received_hash = int(callback_data['hashed'])
@@ -309,7 +309,7 @@ async def display_friends_wishlist_process(message: types.Message, state: FSMCon
 @dp.callback_query_handler(classes.WishToReserve.filter(), state='*')
 @rate_limit(1)
 async def reserve_wish_process(query: types.CallbackQuery, state: FSMContext, callback_data: dict):
-    await query.answer()
+    await query.answer('Подарок выбран')
     tg_id = query.from_user.id
     db_hash = await c.get_keyboard_hash(tg_id=tg_id)
     received_hash = int(callback_data['hashed'])
@@ -326,7 +326,7 @@ async def reserve_wish_process(query: types.CallbackQuery, state: FSMContext, ca
 @dp.callback_query_handler(classes.WishToUnreserve.filter(), state='*')
 @rate_limit(1)
 async def unreserve_wish_process(query: types.CallbackQuery, state: FSMContext, callback_data: dict):
-    await query.answer()
+    await query.answer('Подарок отменен')
     tg_id = query.from_user.id
     db_hash = await c.get_keyboard_hash(tg_id=tg_id)
     received_hash = int(callback_data['hashed'])

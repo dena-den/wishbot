@@ -324,11 +324,6 @@ class Controller:
 
     async def reserve_wish(self, wish_id, tg_id):
         self.db.reserve_wish(wish_id=wish_id, tg_id_who_chose=tg_id)
-        text = '<b>Подарок успешно забронирован!</b>'
-        await self.bot.send_message(chat_id=tg_id,
-                                    text=text,
-                                    reply_markup=None,
-                                    parse_mode='HTML')
 
 
 
