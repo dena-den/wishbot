@@ -6,9 +6,9 @@ services:
       context: .
       dockerfile: Dockerfile
     command: >
-      bash -c "python polling.py"
+      bash -c "uvicorn main:app"
     ports:
-      - 80:8000
+      - 8000:8000
     image: wishbot-dev
     hostname: abra-api
     container_name: wishbot-dev
