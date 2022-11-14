@@ -1,7 +1,6 @@
-FROM python:3.8.10-alpine
+FROM python:3.8.10
 
 ENV PYTHONUNBUFFERED 1
-
 
 WORKDIR /api
 EXPOSE 8000
