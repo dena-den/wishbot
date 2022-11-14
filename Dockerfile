@@ -2,7 +2,6 @@ FROM python:3.8.10-alpine
 
 ENV PYTHONUNBUFFERED 1
 
-RUN apt-get update
 
 WORKDIR /api
 EXPOSE 8000
