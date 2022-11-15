@@ -233,7 +233,7 @@ class Controller:
         self.db.delete_wish(wish_id=wish_id)
 
     async def input_wish_link(self, state, wish_id):
-        text = 'Отправь мне описание, которое хочешь добавить.'
+        text = 'Отправь мне описание, которое хочешь добавить. Это может быть ссылка на товар в интернете или что угодно.'
         markup = markups.back_to_markup(to='start')
         await state.set_state(states.Wish.wish_link_to_add)
         async with state.proxy() as data:
