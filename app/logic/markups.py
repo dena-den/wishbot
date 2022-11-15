@@ -62,7 +62,7 @@ def delete_wish_button(wish_id: int,
             )
         ))
     markup.insert(types.InlineKeyboardButton(
-                'Добавить ссылку',
+                'Добавить описание',
                 callback_data=classes.AddLink.new(
                     wish_id=wish_id,
                     hashed=hashed
@@ -104,6 +104,6 @@ def friend_wishlist_markup():
     
 def wishes_reseved_by_me_markup():
     markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
-    markup.insert(types.KeyboardButton("Назад в стартовое меню"))
     markup.insert(types.KeyboardButton("Выбрать подарок другу"))
+    markup.insert(types.KeyboardButton("Назад в стартовое меню"))
     return markup

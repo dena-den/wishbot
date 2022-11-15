@@ -39,7 +39,7 @@ class Controller:
     async def create_invitation(self, tg_id):
         user_id = self.db.get_user_id_by_tg_id(tg_id=tg_id)
         if not user_id:
-            text = 'Для начала тебе нужно создать свой список подарков'
+            text = 'Для начала тебе нужно создать свой список подарков. Нажми кнопку ⬇️'
             markup = markups.invitation_no_registered_user()
         else:
             text = "<i>Разошли следующее сообщение своим друзьям:</i>"
@@ -56,8 +56,8 @@ class Controller:
         return dict(text=text, markup=markup)
 
     async def enter_name(self, message, state):
-        text = "Для начала мне нужно с тобой совсем немного познакомиться." \
-               "<b>1/3</b> Введи свое имя (можно с фамилией). Его будут видеть твои друзья."
+        text = "Для начала мне нужно с тобой совсем немного познакомиться. Всего 3 простых шага!" \
+               "1️⃣ Введи свое имя (можно с фамилией). Его будут видеть только твои друзья."
         markup = markups.back_to_markup(to='start')
         await state.set_state(states.User.name)
         return dict(text=text, markup=markup)
@@ -69,18 +69,18 @@ class Controller:
             if re.fullmatch(name_pattern, user_data) and len(user_data) < 128:
                 async with state.proxy() as data:
                     data['name'] = user_data
-                text = "<b>2/3</b> Введи дату рождения, чтобы друзья точно знали, когда у тебя праздник!"
+                text = "2️⃣ Введи дату рождения, чтобы друзья точно знали, когда у тебя праздник!"
                 markup = markups.back_to_markup(to='name')
                 await state.set_state(states.User.birthdate)
             elif not len(user_data) < 64:
-                text = "<b>1/3</b> Слишком длинное имя. Можно обращаться к тебе как-то покороче? Введи имя еще раз."
+                text = "1️⃣ Слишком длинное имя. Можно обращаться к тебе как-то покороче? Введи имя еще раз."
                 markup = markups.back_to_markup(to='start')
             else:
-                text = "<b>1/3</b> Интересное у тебя имя, но нам такое не подойдет. " \
+                text = "1️⃣ Интересное у тебя имя, но нам такое не подойдет. " \
                        "Я понимаю только буквы и тире. Введи еще раз."
                 markup = markups.back_to_markup(to='start')
         else:
-            text = "<b>2/3</b> Введи дату рождения, чтобы друзья точно знали, когда у тебя праздник!"
+            text = "2️⃣ Введи дату рождения, чтобы друзья точно знали, когда у тебя праздник!"
             markup = markups.back_to_markup(to='name')
             await state.set_state(states.User.birthdate)
         return dict(text=text, markup=markup)
@@ -92,16 +92,16 @@ class Controller:
             if birthdate:
                 async with state.proxy() as data:
                     data['birthdate'] = birthdate
-                text = "<b>3/3</b> Поделись своим номером телефона, чтобы твоим друзьям было проще тебя найти. " \
+                text = "3️⃣ Поделись своим номером телефона, чтобы твоим друзьям было проще тебя найти. " \
                        "Но это совсем необязательно."
                 markup = markups.back_to_markup(to='birthdate')
                 await state.set_state(states.User.phone)
             else:
-                text = '<b>2/3</b> Что это за день такой? Введи, пожалуйста, дату в формате ДД.ММ.ГГГГ \n' \
+                text = '<b>2️⃣</b> Что это за день такой? Введи, пожалуйста, дату в формате ДД.ММ.ГГГГ \n' \
                        'Например, <i>20.11.2022</i>'
                 markup = markups.back_to_markup(to='name')
         else:
-            text = "<b>3/3</b> Поделись своим номером телефона, чтобы твоим друзьям было проще тебя найти. " \
+            text = "3️⃣ Поделись своим номером телефона, чтобы твоим друзьям было проще тебя найти. " \
                    "Но это совсем необязательно."
             markup = markups.back_to_markup(to='birthdate')
             await state.set_state(states.User.phone)
@@ -233,7 +233,7 @@ class Controller:
         self.db.delete_wish(wish_id=wish_id)
 
     async def input_wish_link(self, state, wish_id):
-        text = 'Отправьте мне ссылку, которую хотите добавить'
+        text = 'Отправь мне описание, которое хочешь добавить.'
         markup = markups.back_to_markup(to='start')
         await state.set_state(states.Wish.wish_link_to_add)
         async with state.proxy() as data:
@@ -282,7 +282,7 @@ class Controller:
         self.db.unreserve_wish(wish_id=wish_id, tg_id_who_chose=tg_id)
 
     async def enter_friends_code(self, message, state):
-        text = 'Введи <b>номер телефона друга</b> или его <b>6-ти значный код</b>.'
+        text = 'Введи <b>номер телефона друга</b> (начиная с 7) или его <b>6-ти значный код</b>.'
         markup = markups.back_to_markup(to='start')
         await state.set_state(states.Friend.friend_code)
         return dict(text=text, markup=markup)
