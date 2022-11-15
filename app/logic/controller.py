@@ -39,9 +39,9 @@ class Controller:
         else:
             text = "<i>Разошли следующее сообщение своим друзьям:</i>"
             await self.bot.send_message(chat_id=tg_id,
-                    text=text,
-                    reply_markup=None,
-                    parse_mode='HTML')  
+                                        text=text,
+                                        reply_markup=None,
+                                        parse_mode='HTML')  
             phone_number = self.db.get_phone_by_tg_id(tg_id=tg_id)
             if phone_number:
                 text = FRIENDS_INVITATION_BY_PHONE(phone_number=phone_number)
@@ -282,7 +282,7 @@ class Controller:
         self.db.unreserve_wish(wish_id=wish_id, tg_id_who_chose=tg_id)
 
     async def enter_friends_code(self, message, state):
-        text = 'Введите номер телефона друга или его 6-ти значный код.'
+        text = 'Введи <b>номер телефона друга</b> или его <b>6-ти значный код</b>.'
         markup = markups.back_to_markup(to='start')
         await state.set_state(states.Friend.friend_code)
         return dict(text=text, markup=markup)
