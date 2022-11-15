@@ -27,7 +27,7 @@ c = Controller(bot=bot)
 
 @dp.message_handler(commands='start', state='*')
 @dp.message_handler(Text(equals='Назад в стартовое меню'), state='*')
-@rate_limit(1)
+@rate_limit(1, 'start')
 async def command_start_process(message: types.Message, state: FSMContext):
     response = await c.command_start(message=message, state=state)
     await message.reply(
@@ -40,7 +40,7 @@ async def command_start_process(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands='instruction', state='*')
 @dp.message_handler(Text(equals='Как со мной общаться?'), state='*')
-@rate_limit(1)
+@rate_limit(1, 'instruction')
 async def get_instruction_process(message: types.Message):
     response = await c.get_instruction()
     await message.reply(
@@ -53,7 +53,7 @@ async def get_instruction_process(message: types.Message):
 
 @dp.message_handler(commands='invitation', state='*')
 @dp.message_handler(Text(equals='Разослать мой список друзьям'), state='*')
-@rate_limit(1)
+@rate_limit(1, 'invitation')
 async def create_invitation_process(message: types.Message):
     tg_id = message.from_user.id
     response = await c.create_invitation(tg_id=tg_id)
@@ -67,7 +67,7 @@ async def create_invitation_process(message: types.Message):
 
 @dp.message_handler(Text(equals='Создать мой список желаний'), state='*')
 @dp.message_handler(Text(equals='Назад к вводу имени'), state='*')
-@rate_limit(1)
+@rate_limit(1, 'name')
 async def enter_name_process(message: types.Message, state: FSMContext):
     is_user_exist = await c.check_is_user_exist(tg_id=message.from_user.id)
     if not is_user_exist:
@@ -86,7 +86,7 @@ async def enter_name_process(message: types.Message, state: FSMContext):
 @dp.message_handler(lambda msg: not msg.text.startswith(('Назад', '/')),
                     state=states.User.name)
 @dp.message_handler(Text(equals='Назад к вводу даты рождения'), state='*')
-@rate_limit(1)
+@rate_limit(1, 'birthdate')
 async def enter_birthdate_process(message: types.Message, state: FSMContext):
     response = await c.enter_birthdate(message=message, state=state)
     await message.reply(
@@ -100,7 +100,7 @@ async def enter_birthdate_process(message: types.Message, state: FSMContext):
 @dp.message_handler(lambda msg: not msg.text.startswith(('Назад', '/')),
                     state=states.User.birthdate)
 @dp.message_handler(Text(equals='Назад к вводу телефона'), state='*')
-@rate_limit(1)
+@rate_limit(1, 'phone')
 async def enter_phone_process(message: types.Message, state: FSMContext):
     response = await c.enter_phone(message=message, state=state)
     await message.reply(
@@ -113,7 +113,7 @@ async def enter_phone_process(message: types.Message, state: FSMContext):
 
 @dp.message_handler(content_types=['contact'], 
                     state=states.User.phone)
-@rate_limit(1)
+@rate_limit(1, 'check_pd')
 async def check_data_with_phone_process(message: types.Message, state: FSMContext):
     response = await c.check_data(message=message, state=state)
     await message.reply(
@@ -126,7 +126,7 @@ async def check_data_with_phone_process(message: types.Message, state: FSMContex
 
 @dp.message_handler(lambda msg: not msg.text.startswith(('Назад', '/', 'Все')),
                     state=states.User.phone)
-@rate_limit(1)
+@rate_limit(1, 'check_pd_no_phone')
 async def check_data_no_phone_process(message: types.Message, state: FSMContext):
     if message.text == 'Не хочу сообщать':
         response = await c.check_data(message=message, state=state)
@@ -148,7 +148,7 @@ async def check_data_no_phone_process(message: types.Message, state: FSMContext)
 @dp.message_handler(Text(equals='Открыть мой список желаний'), state='*')
 @dp.message_handler(Text(equals='Все правильно'), state=states.User.phone)
 @dp.message_handler(Text(equals='Назад к списку'), state='*')
-@rate_limit(1)
+@rate_limit(1, 'my_wishes')
 async def display_my_wishlist_process(message: types.Message, state: FSMContext):
     if message.text == 'Все правильно':
         await c.add_user_to_db(message=message, state=state)
@@ -168,7 +168,7 @@ async def display_my_wishlist_process(message: types.Message, state: FSMContext)
 
 
 @dp.message_handler(Text(equals='Добавить желание'))
-@rate_limit(1)
+@rate_limit(1, 'add_wish')
 async def enter_wish_name_process(message: types.Message, state: FSMContext):
     response = await c.enter_wish_name(message=message, state=state)
     await message.reply(
@@ -181,7 +181,7 @@ async def enter_wish_name_process(message: types.Message, state: FSMContext):
 
 @dp.message_handler(lambda msg: not msg.text.startswith(('Назад', '/')),
                     state=states.Wish.wish_name_to_add)
-@rate_limit(1)
+@rate_limit(1, 'add_wish_process')
 async def add_wish_process(message: types.Message, state: FSMContext):
     await c.add_wish(message=message, state=state, is_list_of_wishes=0)
     response = await c.display_my_wishlist(tg_id=message.from_user.id, state=state)
@@ -194,7 +194,7 @@ async def add_wish_process(message: types.Message, state: FSMContext):
 
 
 @dp.message_handler(Text(equals='Добавить желания списком'))
-@rate_limit(1)
+@rate_limit(1, 'add_wishes')
 async def enter_list_wish_name_process(message: types.Message, state: FSMContext):
     response = await c.enter_list_wish_name(message=message, state=state)
     await message.reply(
@@ -207,7 +207,7 @@ async def enter_list_wish_name_process(message: types.Message, state: FSMContext
 
 @dp.message_handler(lambda msg: not msg.text.startswith(('Назад', '/')),
                     state=states.Wish.wish_names_to_add)
-@rate_limit(1)
+@rate_limit(1, 'add_wishes_process')
 async def add_wish_list_process(message: types.Message, state: FSMContext):
     await c.add_wish(message=message, state=state, is_list_of_wishes=1)
     response = await c.display_my_wishlist(tg_id=message.from_user.id, state=state)
@@ -220,7 +220,7 @@ async def add_wish_list_process(message: types.Message, state: FSMContext):
 
 
 @dp.callback_query_handler(classes.WishToDelete.filter(), state='*')
-@rate_limit(1)
+@rate_limit(1, 'delete_wish')
 async def delete_wish_process(query: types.CallbackQuery, state: FSMContext, callback_data: dict):
     tg_id = query.from_user.id
     db_hash = await c.get_keyboard_hash(tg_id=tg_id)
@@ -237,7 +237,7 @@ async def delete_wish_process(query: types.CallbackQuery, state: FSMContext, cal
 
 
 @dp.callback_query_handler(classes.AddLink.filter(), state='*')
-@rate_limit(1)
+@rate_limit(1, 'input_wishlink')
 async def input_wish_link_process(query: types.CallbackQuery, state: FSMContext, callback_data: dict):
     tg_id = query.from_user.id
     db_hash = await c.get_keyboard_hash(tg_id=tg_id)
@@ -254,7 +254,7 @@ async def input_wish_link_process(query: types.CallbackQuery, state: FSMContext,
 
 @dp.message_handler(lambda msg: not msg.text.startswith(('Назад', '/')),
                     state=states.Wish.wish_link_to_add)
-@rate_limit(1)
+@rate_limit(1, 'add_wish_link')
 async def add_wish_link_process(message: types.Message, state: FSMContext):
     await c.add_wish_link(state=state, wish_link=message.text)
     response = await c.display_my_wishlist(tg_id=message.from_user.id, state=state)
@@ -283,7 +283,7 @@ async def display_wishes_reserved_by_me_process(message: types.Message, state: F
 @dp.message_handler(commands='friend_wishes', state='*')
 @dp.message_handler(Text(equals='Выбрать подарок другу'))
 @dp.message_handler(Text(equals='Назад к введению кода'), state='*')
-@rate_limit(1)
+@rate_limit(1, 'find_friend_wishlist')
 async def enter_friends_code_process(message: types.Message, state: FSMContext):
     response = await c.enter_friends_code(message=message, state=state)
     await message.reply(
@@ -296,7 +296,7 @@ async def enter_friends_code_process(message: types.Message, state: FSMContext):
 
 @dp.message_handler(lambda msg: not msg.text.startswith(('Назад', '/')),
                     state=states.Friend.friend_code)
-@rate_limit(1)
+@rate_limit(1, 'friend_wishlist')
 async def display_friends_wishlist_process(message: types.Message, state: FSMContext):
     try:
         friend_user_id = await c.get_friend_user_id(message=message, state=state)
@@ -321,7 +321,7 @@ async def display_friends_wishlist_process(message: types.Message, state: FSMCon
 
 
 @dp.callback_query_handler(classes.WishToReserve.filter(), state='*')
-@rate_limit(1)
+@rate_limit(1, 'reserve_wish')
 async def reserve_wish_process(query: types.CallbackQuery, state: FSMContext, callback_data: dict):
     tg_id = query.from_user.id
     db_hash = await c.get_keyboard_hash(tg_id=tg_id)
@@ -338,7 +338,7 @@ async def reserve_wish_process(query: types.CallbackQuery, state: FSMContext, ca
 
 
 @dp.callback_query_handler(classes.WishToUnreserve.filter(), state='*')
-@rate_limit(1)
+@rate_limit(1, 'unreserve_wish')
 async def unreserve_wish_process(query: types.CallbackQuery, state: FSMContext, callback_data: dict):
     tg_id = query.from_user.id
     db_hash = await c.get_keyboard_hash(tg_id=tg_id)
