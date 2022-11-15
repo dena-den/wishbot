@@ -49,9 +49,9 @@ class Controller:
                                         parse_mode='HTML')  
             phone_number = self.db.get_phone_by_tg_id(tg_id=tg_id)
             if phone_number:
-                text = FRIENDS_INVITATION_BY_PHONE(phone_number=phone_number)
+                text = FRIENDS_INVITATION_BY_PHONE.format(phone_number=phone_number)
             else:
-                text = FRIENDS_INVITATION_BY_CODE(user_id=user_id)
+                text = FRIENDS_INVITATION_BY_CODE.format(user_id=user_id)
             markup = markups.back_to_markup(to='start')
         return dict(text=text, markup=markup)
 
