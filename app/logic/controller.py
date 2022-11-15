@@ -37,6 +37,11 @@ class Controller:
             text = 'Для начала тебе нужно создать свой список подарков'
             markup = markups.invitation_no_registered_user()
         else:
+            text = "<i>Разошли следующее сообщение своим друзьям:</i>"
+            await self.bot.send_message(chat_id=tg_id,
+                    text=text,
+                    reply_markup=None,
+                    parse_mode='HTML')  
             phone_number = self.db.get_phone_by_tg_id(tg_id=tg_id)
             if phone_number:
                 text = FRIENDS_INVITATION_BY_PHONE(phone_number=phone_number)
