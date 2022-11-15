@@ -40,7 +40,7 @@ async def command_start_process(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands='instruction', state='*')
 @dp.message_handler(Text(equals='Как со мной общаться?'), state='*')
-# @rate_limit(1, 'instruction')
+@rate_limit(1, 'instruction')
 async def get_instruction_process(message: types.Message):
     response = await c.get_instruction()
     await message.reply(
@@ -52,8 +52,8 @@ async def get_instruction_process(message: types.Message):
 
 
 @dp.message_handler(commands='invitation', state='*')
-@dp.message_handler(Text(equals='Разослать мой список друзьям'), state='*')
-@rate_limit(1, 'invitation')
+@dp.message_handler(Text(equals='Разослать список друзьям'), state='*')
+# @rate_limit(1, 'invitation')
 async def create_invitation_process(message: types.Message):
     tg_id = message.from_user.id
     response = await c.create_invitation(tg_id=tg_id)

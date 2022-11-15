@@ -10,7 +10,7 @@ def start_menu_markup(is_user_exist: int):
         markup.insert(types.KeyboardButton("Создать мой список желаний"))
     markup.insert(types.KeyboardButton("Выбрать подарок другу"))
     markup.insert(types.KeyboardButton("Забронированные мною подарки"))
-    markup.insert(types.KeyboardButton("Разослать мой список друзьям"))
+    markup.insert(types.KeyboardButton("Разослать список друзьям"))
     markup.insert(types.KeyboardButton("Как со мной общаться?"))
     return markup
 
