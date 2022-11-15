@@ -53,7 +53,7 @@ async def get_instruction_process(message: types.Message):
 
 @dp.message_handler(commands='invitation', state='*')
 @dp.message_handler(Text(equals='Разослать список друзьям'), state='*')
-# @rate_limit(1, 'invitation')
+@rate_limit(1, 'invitation')
 async def create_invitation_process(message: types.Message):
     tg_id = message.from_user.id
     response = await c.create_invitation(tg_id=tg_id)
