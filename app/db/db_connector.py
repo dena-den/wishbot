@@ -96,6 +96,15 @@ class Database:
                     .scalar()
                 return query if query else None
 
+    def get_phone_by_tg_id(self, tg_id):
+        with self.session() as session:
+            with session.begin():
+                query = session \
+                    .execute(select(User.phone) \
+                    .where(User.tg_id.__eq__(tg_id))) \
+                    .scalar()
+                return query if query else None
+
     def get_user_info_by_user_id(self, user_id):
         with self.session() as session:
             with session.begin():

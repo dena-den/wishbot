@@ -8,9 +8,10 @@ def start_menu_markup(is_user_exist: int):
         markup.insert(types.KeyboardButton("Открыть мой список желаний"))
     else:
         markup.insert(types.KeyboardButton("Создать мой список желаний"))
-    markup.insert(types.KeyboardButton("Как со мной общаться?"))
     markup.insert(types.KeyboardButton("Выбрать подарок другу"))
     markup.insert(types.KeyboardButton("Забронированные мною подарки"))
+    markup.insert(types.KeyboardButton("Разослать мой список друзьям"))
+    markup.insert(types.KeyboardButton("Как со мной общаться?"))
     return markup
 
 
@@ -30,6 +31,13 @@ def back_to_markup(to: str):
         markup.insert(types.KeyboardButton("Назад к вводу телефона"))
     elif to == 'wishlist':
         markup.insert(types.KeyboardButton("Назад к списку"))
+    return markup
+
+
+def invitation_no_registered_user():
+    markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
+    markup.insert(types.KeyboardButton("Создать мой список желаний"))
+    markup.insert(types.KeyboardButton("Назад в стартовое меню"))
     return markup
 
 

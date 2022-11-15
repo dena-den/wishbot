@@ -31,6 +31,20 @@ class Controller:
         markup = markups.start_menu_markup(is_user_exist=is_user_exist)
         return dict(text=text, markup=markup)
 
+    async def create_invitation(self, tg_id):
+        user_id = self.db.get_user_id_by_tg_id(tg_id=tg_id)
+        if not user_id:
+            text = 'Для начала тебе нужно создать свой список подарков'
+            markup = markups.invitation_no_registered_user()
+        else:
+            phone_number = self.db.get_phone_by_tg_id(tg_id=tg_id)
+            if phone_number:
+                text = FRIENDS_INVITATION_BY_PHONE(phone_number=phone_number)
+            else:
+                text = FRIENDS_INVITATION_BY_CODE(user_id=user_id)
+            markup = markups.back_to_markup(to='start')
+        return dict(text=text, markup=markup)
+
     async def get_instruction(self):
         text = INSTRUCTION
         markup = markups.back_to_markup(to='start')
