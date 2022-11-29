@@ -8,6 +8,7 @@ import logging
 from app.const.consts import *
 from app.logic import memory
 from random import randint, random, choice
+from app.logic.utils import get_moscow_datetime
 
 
 class Controller:
@@ -39,7 +40,7 @@ class Controller:
     async def create_invitation(self, tg_id):
         user_id = self.db.get_user_id_by_tg_id(tg_id=tg_id)
         if not user_id:
-            text = 'Для начала тебе нужно создать свой список подарков. Нажми кнопку ⬇️'
+            text = 'Для начала тебе нужно создать свой список подарков.\nНажми кнопку ниже ⬇️'
             markup = markups.invitation_no_registered_user()
         else:
             text = "<i>Разошли следующее сообщение своим друзьям:</i>"
@@ -56,7 +57,7 @@ class Controller:
         return dict(text=text, markup=markup)
 
     async def enter_name(self, message, state):
-        text = "Для начала мне нужно с тобой совсем немного познакомиться. Всего 3 простых шага!" \
+        text = "Для начала мне нужно с тобой совсем немного познакомиться. <b>Всего 3 простых шага!</b>\n\n" \
                "1️⃣ Введи свое имя (можно с фамилией). Его будут видеть только твои друзья."
         markup = markups.back_to_markup(to='start')
         await state.set_state(states.User.name)
@@ -113,7 +114,9 @@ class Controller:
                 data['phone'] = None
             else:
                 data['phone'] = message.contact.phone_number.strip('+')
-            user_data = ', '.join([str(value) for value in data.values() if value])
+            data_to_send = dict(data).copy()
+            data_to_send['birthdate'] = data_to_send['birthdate'].strftime('%d.%m.%Y')
+            user_data = ', '.join([str(value) for value in data_to_send.values() if value])
             text = "Я все правильно записал? Проверь, пожалуйста:\n" \
                    f"{user_data}"
         markup = markups.back_to_markup(to='phone')
@@ -134,7 +137,8 @@ class Controller:
                 birthdate=data['birthdate'],
                 phone=data['phone'],
                 tg_id=message.from_user.id,
-                tg_nickname=message.from_user.username
+                tg_nickname=message.from_user.username,
+                registration_datetime=get_moscow_datetime()
             )
             self.db.add_user(user_data=user_data)
         await state.finish()

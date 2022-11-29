@@ -200,7 +200,8 @@ class Database:
 
                 data = WishHistory(
                     wish_id=wish_id,
-                    tg_id_who_chose=tg_id_who_chose
+                    tg_id_who_chose=tg_id_who_chose,
+                    start_datetime=get_moscow_datetime()
                 )
                 session.add(data)
 

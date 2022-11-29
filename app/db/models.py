@@ -1,6 +1,5 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Date, Time, DateTime, Boolean, BigInteger
 from sqlalchemy.orm import declarative_base, relationship
-from app.logic.utils import get_moscow_datetime
 
 
 Base = declarative_base()
@@ -14,7 +13,7 @@ class User(Base):
     phone = Column(String, nullable=True)
     tg_id = Column(BigInteger, nullable=False)
     tg_nickname = Column(String, nullable=False)
-    registration_datetime = Column(DateTime, default=get_moscow_datetime())
+    registration_datetime = Column(DateTime)
     is_admin = Column(Boolean, default=False)
 
 
@@ -33,7 +32,7 @@ class WishHistory(Base):
     id = Column(Integer, primary_key=True)
     tg_id_who_chose = Column(BigInteger, nullable=False)
     wish_id = Column(Integer, ForeignKey("wishlists.id"), nullable=False)
-    start_datetime = Column(DateTime, default=get_moscow_datetime())
+    start_datetime = Column(DateTime)
     end_datetime = Column(DateTime, default=None)
 
 
