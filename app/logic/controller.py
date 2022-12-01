@@ -298,7 +298,7 @@ class Controller:
         self.db.unreserve_wish(wish_id=wish_id, tg_id_who_chose=tg_id)
 
     async def enter_friends_code(self, message, state):
-        text = 'Введи <b>номер телефона друга</b> (начиная с 7) \nили \nего <b>6-ти значный код</b>.'
+        text = 'Введи <b>номер телефона друга</b> (начиная с 7) \nили его <b>6-ти значный код</b>.'
         markup = markups.back_to_markup(to='start')
         await state.set_state(states.Friend.friend_code)
         return dict(text=text, markup=markup)
