@@ -193,7 +193,7 @@ class Controller:
         return dict(text=text, markup=markup)
 
     async def enter_list_wish_name(self, message, state):
-        text = 'Введи несколько желаний, каждое с новой строки (но не больше 5). ' \
+        text = 'Введи несколько желаний, каждое с новой строки (но не больше 20 за раз). ' \
                'Например:\n\n<i>Вертолетик на радиоуправлении\nСкейтборд\nКонструктор LEGO</i>'
         markup = markups.back_to_markup(to='wishlist')
         await state.set_state(states.Wish.wish_names_to_add)
@@ -213,25 +213,37 @@ class Controller:
 
     async def add_wish(self, message, state, is_list_of_wishes):
         user_id = self.db.get_user_id_by_tg_id(tg_id=message.from_user.id)
-        if is_list_of_wishes:
-            wishes = message.text.split('\n')
-        else:
-            wishes = [message.text]
-        for num, wish in enumerate(wishes, start=1):
-            if num == 6:
-                text = '<b>Я принял только 5 первых подарков.</b> Остальные отправь, пожалуйста, еще раз.'
-                await self.bot.send_message(
+
+        wishes_user_already_has = self.db.count_user_wishes(user_id=user_id)
+        if wishes_user_already_has > 30:
+            text = 'Ты добавил уже больше 30 желаний. Больше мне в памяти не удержать.' \
+                   'Попробуй удалить лишние.'
+            await self.bot.send_message(
                     chat_id=message.from_user.id,
                     text=text,
                     reply_markup=None,
                     parse_mode='HTML'
                 )
-                break
-            wishlist_data = dict(
-                user_id=user_id,
-                name=wish
-            )
-            self.db.add_wish(wishlist_data=wishlist_data)
+        else:
+            if is_list_of_wishes:
+                wishes = message.text.split('\n')
+            else:
+                wishes = [message.text]
+            for num, wish in enumerate(wishes, start=1):
+                if num == 20:
+                    text = '<b>Я принял только 20 первых подарков.</b> Остальные отправь, пожалуйста, еще раз.'
+                    await self.bot.send_message(
+                        chat_id=message.from_user.id,
+                        text=text,
+                        reply_markup=None,
+                        parse_mode='HTML'
+                    )
+                    break
+                wishlist_data = dict(
+                    user_id=user_id,
+                    name=wish
+                )
+                self.db.add_wish(wishlist_data=wishlist_data)
 
     async def delete_wish(self, wish_id):
         self.db.delete_wish(wish_id=wish_id)
@@ -286,7 +298,7 @@ class Controller:
         self.db.unreserve_wish(wish_id=wish_id, tg_id_who_chose=tg_id)
 
     async def enter_friends_code(self, message, state):
-        text = 'Введи <b>номер телефона друга</b> (начиная с 7) или его <b>6-ти значный код</b>.'
+        text = 'Введи <b>номер телефона друга</b> (начиная с 7) \nили \nего <b>6-ти значный код</b>.'
         markup = markups.back_to_markup(to='start')
         await state.set_state(states.Friend.friend_code)
         return dict(text=text, markup=markup)
@@ -337,11 +349,11 @@ class Controller:
                                     parse_mode='HTML')
             user_info = self.db.get_user_info_by_user_id(user_id=friend_user_id)
             if number_of_wishes_reserved_by_me < 2:
-                text = FRIEND_WISHES_BOTTOM.format(name=user_info["name"], birthdate=user_info["birthdate"])
+                text = FRIEND_WISHES_BOTTOM.format(name=user_info["name"], birthdate=user_info["birthdate"].strftime('%d.%m.%Y'))
             else:
-                text = FRIENDS_WISHES_BLOCKED.format(name=user_info["name"], birthdate=user_info["birthdate"])
+                text = FRIENDS_WISHES_BLOCKED.format(name=user_info["name"], birthdate=user_info["birthdate"].strftime('%d.%m.%Y'))
         else:
-            text = FRIEND_WISHES_EMPTY_BOTTOM.format(name=user_info["name"], birthdate=user_info["birthdate"])
+            text = FRIEND_WISHES_EMPTY_BOTTOM.format(name=user_info["name"], birthdate=user_info["birthdate"].strftime('%d.%m.%Y'))
         markup = markups.friend_wishlist_markup()
         return dict(text=text, markup=markup)
 

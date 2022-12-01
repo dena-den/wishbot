@@ -3,7 +3,7 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.sql.elements import and_
 from app.db.models import *
 from os import getenv
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, func
 from app.const.queries import *
 from app.logic.utils import get_moscow_datetime
 
@@ -216,3 +216,13 @@ class Database:
                 session.query(Wishlist)\
                     .where(Wishlist.id.__eq__(wish_id))\
                     .update({Wishlist.is_reserved: 0})
+
+
+    def count_user_wishes(self, user_id):
+        with self.session() as session:
+            with session.begin():
+                query = session \
+                    .execute(select(func.count()) \
+                    .where(Wishlist.user_id.__eq__(user_id))) \
+                    .scalar()
+                return query
