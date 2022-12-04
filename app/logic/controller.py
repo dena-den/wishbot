@@ -298,7 +298,7 @@ class Controller:
         self.db.unreserve_wish(wish_id=wish_id, tg_id_who_chose=tg_id)
 
     async def enter_friends_code(self, message, state):
-        text = 'Введи <b>номер телефона друга</b> (начиная с 7) \nили его <b>6-ти значный код</b>.'
+        text = 'Введи <b>номер телефона друга</b> или его <b>6-ти значный код</b>.'
         markup = markups.back_to_markup(to='start')
         await state.set_state(states.Friend.friend_code)
         return dict(text=text, markup=markup)
@@ -323,6 +323,7 @@ class Controller:
             friend_user_id=friend_user_id,
             my_tg_id=my_tg_id
         )
+        user_info = self.db.get_user_info_by_user_id(user_id=friend_user_id)
         wishes = self.db.get_available_wishes_by_user_id(user_id=friend_user_id)
         if wishes:
             text = WISHES_TOP
@@ -347,7 +348,6 @@ class Controller:
                                     text=text,
                                     reply_markup=reserve_wish_markup,
                                     parse_mode='HTML')
-            user_info = self.db.get_user_info_by_user_id(user_id=friend_user_id)
             if number_of_wishes_reserved_by_me < 2:
                 text = FRIEND_WISHES_BOTTOM.format(name=user_info["name"], birthdate=user_info["birthdate"].strftime('%d.%m.%Y'))
             else:
