@@ -24,7 +24,7 @@ def back_to_markup(to: str):
     elif to == 'birthdate':
         markup.insert(types.KeyboardButton('Поделиться номером телефона',
                                            request_contact=True))
-        markup.insert(types.KeyboardButton("Не хочу сообщать"))
+        markup.insert(types.KeyboardButton("Использовать шестизначный код"))
         markup.insert(types.KeyboardButton("Назад к вводу даты рождения"))
     elif to == 'phone':
         markup.insert(types.KeyboardButton("Все правильно"))

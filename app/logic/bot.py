@@ -130,7 +130,7 @@ async def check_data_with_phone_process(message: types.Message, state: FSMContex
                     state=states.User.phone)
 # @limits(1, 1)  #@rate_limit(1, 'check_pd_no_phone')
 async def check_data_no_phone_process(message: types.Message, state: FSMContext):
-    if message.text == 'Не хочу сообщать':
+    if message.text == 'Использовать шестизначный код':
         response = await c.check_data(message=message, state=state)
     else:
         response = dict(

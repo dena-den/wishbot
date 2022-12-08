@@ -8,7 +8,7 @@ import logging
 from app.const.consts import *
 from app.logic import memory
 from random import randint, random, choice
-from app.logic.utils import get_moscow_datetime
+from app.logic.utils import get_moscow_datetime, format_birthdate
 
 
 class Controller:
@@ -57,8 +57,8 @@ class Controller:
         return dict(text=text, markup=markup)
 
     async def enter_name(self, message, state):
-        text = "Для начала мне нужно с тобой совсем немного познакомиться. <b>Всего 3 простых шага!</b>\n\n" \
-               "1️⃣ Введи свое имя (можно с фамилией). Его будут видеть только твои друзья."
+        text = "Мне нужно с тобой совсем немного познакомиться. <b>Всего 3 простых шага!</b>\n\n" \
+               "Для начала, представься, чтобы твои друзья могли тебя опознать 👀"
         markup = markups.back_to_markup(to='start')
         await state.set_state(states.User.name)
         return dict(text=text, markup=markup)
@@ -70,18 +70,18 @@ class Controller:
             if re.fullmatch(name_pattern, user_data) and len(user_data) < 128:
                 async with state.proxy() as data:
                     data['name'] = user_data
-                text = "2️⃣ Введи дату рождения, чтобы друзья точно знали, когда у тебя праздник!"
+                text = SHARE_BIRTHDATE
                 markup = markups.back_to_markup(to='name')
                 await state.set_state(states.User.birthdate)
             elif not len(user_data) < 64:
-                text = "1️⃣ Слишком длинное имя. Можно обращаться к тебе как-то покороче? Введи имя еще раз."
+                text = "Слишком длинное имя. Можно обращаться к тебе как-то покороче? Введи имя еще раз."
                 markup = markups.back_to_markup(to='start')
             else:
-                text = "1️⃣ Интересное у тебя имя, но нам такое не подойдет. " \
+                text = "Интересное у тебя имя, но нам такое не подойдет. " \
                        "Я понимаю только буквы и тире. Введи еще раз."
                 markup = markups.back_to_markup(to='start')
         else:
-            text = "2️⃣ Введи дату рождения, чтобы друзья точно знали, когда у тебя праздник!"
+            text = SHARE_BIRTHDATE
             markup = markups.back_to_markup(to='name')
             await state.set_state(states.User.birthdate)
         return dict(text=text, markup=markup)
@@ -93,32 +93,30 @@ class Controller:
             if birthdate:
                 async with state.proxy() as data:
                     data['birthdate'] = birthdate
-                text = "3️⃣ Поделись своим номером телефона, чтобы твоим друзьям было проще тебя найти. " \
-                       "Но это совсем необязательно."
+                text = SHARE_PHONE_NUMBER
                 markup = markups.back_to_markup(to='birthdate')
                 await state.set_state(states.User.phone)
             else:
-                text = '<b>2️⃣</b> Что это за день такой? Введи, пожалуйста, дату в формате ДД.ММ.ГГГГ \n' \
-                       'Например, <i>20.11.2022</i>'
+                text = 'Что это за день такой? Введи, пожалуйста, дату в формате ДД.ММ.ГГГГ или ДД.ММ \n' \
+                       'Например, <i>20.04.1990</i>'
                 markup = markups.back_to_markup(to='name')
         else:
-            text = "3️⃣ Поделись своим номером телефона, чтобы твоим друзьям было проще тебя найти. " \
-                   "Но это совсем необязательно."
+            text = SHARE_PHONE_NUMBER
             markup = markups.back_to_markup(to='birthdate')
             await state.set_state(states.User.phone)
         return dict(text=text, markup=markup)
 
     async def check_data(self, message, state):
         async with state.proxy() as data:
-            if message.text == 'Не хочу сообщать':
+            if message.text == 'Использовать шестизначный код':
                 data['phone'] = None
             else:
                 data['phone'] = message.contact.phone_number.strip('+')
             data_to_send = dict(data).copy()
-            data_to_send['birthdate'] = data_to_send['birthdate'].strftime('%d.%m.%Y')
+            data_to_send['birthdate'] = format_birthdate(data_to_send['birthdate'])
             user_data = ', '.join([str(value) for value in data_to_send.values() if value])
             text = "Я все правильно записал? Проверь, пожалуйста:\n" \
-                   f"{user_data}"
+                   f"<b>{user_data}</b>"
         markup = markups.back_to_markup(to='phone')
         return dict(text=text, markup=markup)
 
@@ -159,9 +157,9 @@ class Controller:
                 wish_id = wish.pop('id')
                 delete_button_disabled = bool(wish['is_reserved'])
                 if wish['is_reserved']:
-                    wish['is_reserved'] = '🔒 - подарок уже выбран твоим другом'
+                    wish['is_reserved'] = '✅ - кто-то из твоих друзей решил исполнить это желание!'
                 else:
-                    wish['is_reserved'] = '🆓 - этот подарок еще свободен'
+                    wish['is_reserved'] = ''
                 delete_wish_markup = markups.delete_wish_button(
                     wish_id=wish_id,
                     hashed=hashed,
@@ -249,7 +247,8 @@ class Controller:
         self.db.delete_wish(wish_id=wish_id)
 
     async def input_wish_link(self, state, wish_id):
-        text = 'Отправь мне описание, которое хочешь добавить. Это может быть ссылка на товар в интернете или что угодно.'
+        text = 'Отправь мне описание, которое хочешь добавить. Это может быть ссылка на товар, ссылка на изображение в интернете или что угодно.\n' \
+               'К сожалению, картинки с твоего телефона я пока обрабатывать не умею.'
         markup = markups.back_to_markup(to='start')
         await state.set_state(states.Wish.wish_link_to_add)
         async with state.proxy() as data:
@@ -278,7 +277,7 @@ class Controller:
                     wish_name=wish['wish_name'],
                     product_link=wish['product_link'] + '\n' if wish['product_link'] else '',
                     name=wish['username'],
-                    birthdate=wish['birthdate']
+                    birthdate=format_birthdate(wish['birthdate'])
                 )
                 unreserve_wish_markup = markups.unreserve_wish_button(
                     wish_id=wish_id,
@@ -298,7 +297,7 @@ class Controller:
         self.db.unreserve_wish(wish_id=wish_id, tg_id_who_chose=tg_id)
 
     async def enter_friends_code(self, message, state):
-        text = 'Введи <b>номер телефона друга</b> или его <b>6-ти значный код</b>.'
+        text = 'Введи <b>номер телефона друга</b> или его <b>шестизначный код</b>.'
         markup = markups.back_to_markup(to='start')
         await state.set_state(states.Friend.friend_code)
         return dict(text=text, markup=markup)
@@ -349,37 +348,13 @@ class Controller:
                                     reply_markup=reserve_wish_markup,
                                     parse_mode='HTML')
             if number_of_wishes_reserved_by_me < 2:
-                text = FRIEND_WISHES_BOTTOM.format(name=user_info["name"], birthdate=user_info["birthdate"].strftime('%d.%m.%Y'))
+                text = FRIEND_WISHES_BOTTOM.format(name=user_info["name"], birthdate=format_birthdate(user_info["birthdate"]))
             else:
-                text = FRIENDS_WISHES_BLOCKED.format(name=user_info["name"], birthdate=user_info["birthdate"].strftime('%d.%m.%Y'))
+                text = FRIENDS_WISHES_BLOCKED.format(name=user_info["name"], birthdate=format_birthdate(user_info["birthdate"]))
         else:
-            text = FRIEND_WISHES_EMPTY_BOTTOM.format(name=user_info["name"], birthdate=user_info["birthdate"].strftime('%d.%m.%Y'))
+            text = FRIEND_WISHES_EMPTY_BOTTOM.format(name=user_info["name"], birthdate=format_birthdate(user_info["birthdate"]))
         markup = markups.friend_wishlist_markup()
         return dict(text=text, markup=markup)
 
     async def reserve_wish(self, wish_id, tg_id):
         self.db.reserve_wish(wish_id=wish_id, tg_id_who_chose=tg_id)
-
-
-
-"""
-    async def message_main_menu_buttons_click(self, message):
-        text = phrases.phrase_for_answer_to_main_menu_buttons(
-            data=dict(
-                button_title=message.text
-            )
-        )
-        return dict(text=text)
-
-    async def message_main_menu_button_notification_click(self, message):
-        await self.notification.notify_admins_about_some_event(
-            data=dict(
-                user_name=message.from_user.first_name,
-                user_nickname=message.from_user.username,
-                date=datetime.now().date,
-                time=datetime.now().time,
-            )
-        )
-        text = "Notification has been sent to admins"
-        return dict(text=text)
-"""
