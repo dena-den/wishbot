@@ -311,7 +311,7 @@ async def display_friends_wishlist_process(message: types.Message, state: FSMCon
     except classes.UserNotFound:
         response = dict(
             text='Пользователя с таким кодом не найдено. Ничего не перепутал? Попробуй еще раз.\n' \
-                 'Если вводишь номер телефона, то начинай с 7.',
+                 'Если вводишь номер телефона, то "+" указывать не надо.',
             markup=markups.back_to_markup(to='start')
         )
     await message.reply(
