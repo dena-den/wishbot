@@ -155,7 +155,6 @@ class Controller:
                     parse_mode='HTML')
             for wish in wishes:
                 wish_id = wish.pop('id')
-                delete_button_disabled = bool(wish['is_reserved'])
                 if wish['is_reserved']:
                     wish['is_reserved'] = '✅ - кто-то из твоих друзей решил исполнить это желание!'
                 else:
@@ -163,7 +162,7 @@ class Controller:
                 delete_wish_markup = markups.delete_wish_button(
                     wish_id=wish_id,
                     hashed=hashed,
-                    delete_button_disabled=delete_button_disabled
+                    is_wish_reserved=bool(wish['is_reserved'])
                 )
                 text = MY_WISH.format(
                     wish_name=wish['name'],
@@ -246,6 +245,16 @@ class Controller:
                     name=wish
                 )
                 self.db.add_wish(wishlist_data=wishlist_data)
+
+    async def delete_wish_if_reserved(self, tg_id, wish_id):
+        hashed = hash(random())
+        self.db.update_keyboard_hash(tg_id=tg_id, hashed=hashed)
+        text = 'Этот подарок забронирован одним из твоих друзей. Удаляй его только если твой праздник уже прошел.'
+        markup = markups.deleting_approval_button(
+            wish_id=wish_id,
+            hashed=hashed
+        )
+        return dict(text=text, markup=markup)
 
     async def delete_wish(self, wish_id):
         self.db.delete_wish(wish_id=wish_id)

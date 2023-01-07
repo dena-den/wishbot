@@ -169,6 +169,19 @@ async def display_my_wishlist_process(message: types.Message, state: FSMContext)
     )
 
 
+@dp.callback_query_handler(classes.ToMyWishes.filter(), state='*')
+async def display_my_wishlist_callback_process(
+    query: types.CallbackQuery, state: FSMContext, callback_data: dict
+    ):
+    tg_id = query.from_user.id
+    query.answer()
+    response = await c.display_my_wishlist(tg_id=tg_id, state=state)
+    await bot.send_message(chat_id=tg_id,
+                           text=response['text'],
+                           reply_markup=response['markup'],
+                           parse_mode='HTML')
+
+
 @dp.message_handler(Text(equals='Добавить желание'))
 # @limits(1, 1)  #@rate_limit(1, 'add_wish')
 async def enter_wish_name_process(message: types.Message, state: FSMContext):
@@ -229,9 +242,16 @@ async def delete_wish_process(query: types.CallbackQuery, state: FSMContext, cal
     received_hash = int(callback_data['hashed'])
     if db_hash != received_hash:
         return
-    await query.answer('Подарок удален')
-    await c.delete_wish(wish_id=callback_data['wish_id'])
-    response = await c.display_my_wishlist(tg_id=tg_id, state=state)
+    if callback_data['is_reserved'] == 'True':
+        await query.answer()
+        response = await c.delete_wish_if_reserved(
+            tg_id=tg_id,
+            wish_id=callback_data['wish_id']
+        )
+    else:
+        await query.answer('Подарок удален')
+        await c.delete_wish(wish_id=callback_data['wish_id'])
+        response = await c.display_my_wishlist(tg_id=tg_id, state=state)
     await bot.send_message(chat_id=tg_id,
                         text=response['text'],
                         reply_markup=response['markup'],

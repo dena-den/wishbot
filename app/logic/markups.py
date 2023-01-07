@@ -51,16 +51,16 @@ def my_wishlist_markup():
 
 def delete_wish_button(wish_id: int,
                        hashed: int, 
-                       delete_button_disabled: bool):
+                       is_wish_reserved: bool):
     markup = types.InlineKeyboardMarkup()
-    if not delete_button_disabled:
-        markup.add(types.InlineKeyboardButton(
-            'Удалить',
-            callback_data=classes.WishToDelete.new(
-                wish_id=wish_id,
-                hashed=hashed
-            )
-        ))
+    markup.add(types.InlineKeyboardButton(
+        'Удалить',
+        callback_data=classes.WishToDelete.new(
+            wish_id=wish_id,
+            hashed=hashed,
+            is_reserved=is_wish_reserved
+        )
+    ))
     markup.insert(types.InlineKeyboardButton(
                 'Добавить описание',
                 callback_data=classes.AddLink.new(
@@ -68,6 +68,24 @@ def delete_wish_button(wish_id: int,
                     hashed=hashed
                 )
             ))
+    return markup
+
+
+def deleting_approval_button(wish_id: int,
+                             hashed: int):
+    markup = types.InlineKeyboardMarkup()
+    markup.add(types.InlineKeyboardButton(
+        'Да, удаляй',
+        callback_data=classes.WishToDelete.new(
+            wish_id=wish_id,
+            hashed=hashed,
+            is_reserved=False
+        )
+    ))
+    markup.insert(types.InlineKeyboardButton(
+        'Назад к списку',
+        callback_data=classes.ToMyWishes.new()
+        ))
     return markup
 
 
