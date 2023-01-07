@@ -329,14 +329,17 @@ async def reserve_wish_process(query: types.CallbackQuery, state: FSMContext, ca
     received_hash = int(callback_data['hashed'])
     if db_hash != received_hash:
         return
-    await query.answer('Подарок выбран')
-    await c.reserve_wish(wish_id=callback_data['wish_id'], tg_id=tg_id)
-    response = await c.display_wishes_reserved_by_me(tg_id=tg_id, state=state)
-    await bot.send_message(chat_id=tg_id,
-                        text=response['text'],
-                        reply_markup=response['markup'],
-                        parse_mode='HTML')
-
+    is_wish_reserved = await c.check_is_wish_reserved(wish_id=callback_data['wish_id'])
+    if not is_wish_reserved:
+        await c.reserve_wish(wish_id=callback_data['wish_id'], tg_id=tg_id)
+        await query.answer('Подарок выбран')
+        response = await c.display_wishes_reserved_by_me(tg_id=tg_id, state=state)
+        await bot.send_message(chat_id=tg_id,
+                            text=response['text'],
+                            reply_markup=response['markup'],
+                            parse_mode='HTML')
+    else:
+        await query.answer('Простите, кто-то уже выбрал этот подарок, попробуйте другой.')
 
 @dp.callback_query_handler(classes.WishToUnreserve.filter(), state='*')
 # @limits(1, 1)  #@rate_limit(1, 'unreserve_wish')

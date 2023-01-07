@@ -205,6 +205,10 @@ class Controller:
         is_user_exist = self.db.is_user_exist_by_tg_id(tg_id=tg_id)
         return is_user_exist
 
+    async def check_is_wish_reserved(self, wish_id):
+        is_wish_reserved = self.db.is_wish_reserved(wish_id=wish_id)
+        return is_wish_reserved
+
     async def get_wish_name(self, wish_id):
         wish_name = self.db.get_wish_name_by_id(wish_id=wish_id)
         return wish_name

@@ -136,6 +136,16 @@ class Database:
                     .fetchall()
                 return [dict(row) for row in query if query]
 
+    def is_wish_reserved(self, wish_id):
+        with self.session() as session:
+            with session.begin():
+                query = session \
+                    .execute(select(Wishlist.is_reserved) \
+                    .where(Wishlist.id.__eq__(wish_id))) \
+                    .scalar()
+                return bool(query)
+
+
     def get_available_wishes_by_user_id(self, user_id):
         with self.session() as session:
             with session.begin():
