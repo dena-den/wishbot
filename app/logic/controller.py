@@ -145,7 +145,7 @@ class Controller:
         await state.finish()
         hashed = hash(random())
         self.db.update_keyboard_hash(tg_id=tg_id, hashed=hashed)
-        user_id = self.db.get_user_id_by_tg_id(tg_id=tg_id) 
+        user_id = self.db.get_user_id_by_tg_id(tg_id=tg_id)
         wishes = self.db.get_wishes_by_tg_id(tg_id=tg_id)
         if wishes:
             text = WISHES_TOP
@@ -172,7 +172,8 @@ class Controller:
                 await self.bot.send_message(chat_id=tg_id,
                                     text=text,
                                     reply_markup=delete_wish_markup,
-                                    parse_mode='HTML')  
+                                    parse_mode='HTML',
+                                    disable_web_page_preview=True)  
             text = MY_WISHES_BOTTOM.format(user_id=user_id)
         else:
             text = MY_WISHES_EMPTY_BOTTOM.format(user_id=user_id)
@@ -299,7 +300,8 @@ class Controller:
                 await self.bot.send_message(chat_id=tg_id,
                                             text=text,
                                             reply_markup=unreserve_wish_markup,
-                                            parse_mode='HTML')
+                                            parse_mode='HTML',
+                                            disable_web_page_preview=True)
             text = RESERVED_WISHES_BOTTOM
         else:
             text = RESERVED_WISHES_EMPTY_BOTTOM
@@ -324,8 +326,11 @@ class Controller:
         is_user_exist = self.db.is_user_exist_by_user_id(user_id=friend_user_id)
         if not is_user_exist:
             raise classes.UserNotFound
-        else:
-            await state.finish()
+        user_id = self.db.get_user_id_by_tg_id(tg_id=message.from_user.id)
+        if user_id == friend_user_id:
+            raise classes.UserIsYou
+        await state.finish()
+
         return friend_user_id
 
     async def display_friends_wishlist(self, my_tg_id, friend_user_id):
@@ -359,7 +364,8 @@ class Controller:
                 await self.bot.send_message(chat_id=my_tg_id,
                                     text=text,
                                     reply_markup=reserve_wish_markup,
-                                    parse_mode='HTML')
+                                    parse_mode='HTML',
+                                    disable_web_page_preview=True)
             if number_of_wishes_reserved_by_me < 2:
                 text = FRIEND_WISHES_BOTTOM.format(name=user_info["name"], birthdate=format_birthdate(user_info["birthdate"]))
             else:

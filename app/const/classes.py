@@ -14,3 +14,7 @@ class ProhibitedSymbols(BaseException):
 
 class UserNotFound(BaseException):
     pass
+
+
+class UserIsYou(BaseException):
+    pass
