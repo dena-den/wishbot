@@ -36,6 +36,15 @@ class WishHistory(Base):
     end_datetime = Column(DateTime, default=None)
 
 
+class LastViewed(Base):
+    __tablename__ = "last_viewed"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    friend_user_id = Column(Integer, nullable=False)
+    friend_name = Column(String, nullable=False)
+    view_datetime = Column(DateTime, default=None)
+
+
 class KeyboardHash(Base):
     __tablename__ = "keyboard_hash"
     tg_id = Column(BigInteger, primary_key=True)

@@ -20,11 +20,10 @@ class Controller:
     def load_user_ids(self):
         memory.user_ids = self.db.get_all_user_ids()
 
-    async def command_start(self, message, state):
+    async def command_start(self, tg_id, name, state):
         await state.finish()
-        self.db.add_empty_keyboard_hash(tg_id=message.from_user.id)
-        name = message.from_user.first_name
-        is_user_exist = self.db.is_user_exist_by_tg_id(tg_id=message.from_user.id)
+        self.db.add_empty_keyboard_hash(tg_id=tg_id)
+        is_user_exist = self.db.is_user_exist_by_tg_id(tg_id=tg_id)
         if is_user_exist:
             text = choice(START_PHRASES)
         else:
@@ -313,7 +312,9 @@ class Controller:
 
     async def enter_friends_code(self, message, state):
         text = 'Введи <b>номер телефона друга</b> или его <b>шестизначный код</b>.'
-        markup = markups.back_to_markup(to='start')
+        last_viewed_data = self.db.get_user_last_viewed_id(tg_id=message.from_user.id)
+        logging.info(f'!! last_viewed_data = {last_viewed_data}')
+        markup = markups.last_viewed_friends_markup(last_viewed_data=last_viewed_data)
         await state.set_state(states.Friend.friend_code)
         return dict(text=text, markup=markup)
 
@@ -323,15 +324,24 @@ class Controller:
             friend_user_id = int(received_code)
         else:
             friend_user_id = self.db.get_user_id_by_phone(phone=int(received_code))
+
         is_user_exist = self.db.is_user_exist_by_user_id(user_id=friend_user_id)
         if not is_user_exist:
             raise classes.UserNotFound
+
         user_id = self.db.get_user_id_by_tg_id(tg_id=message.from_user.id)
         if user_id == friend_user_id:
             raise classes.UserIsYou
-        await state.finish()
 
+        await state.finish()
         return friend_user_id
+
+    async def add_last_viewed_id(self, my_tg_id, friend_user_id):
+        user_id = self.db.get_user_id_by_tg_id(tg_id=my_tg_id)
+        self.db.add_last_viewed_id(
+            user_id=user_id,
+            friend_user_id=friend_user_id
+        )
 
     async def display_friends_wishlist(self, my_tg_id, friend_user_id):
         hashed = hash(random())

@@ -125,3 +125,24 @@ def wishes_reseved_by_me_markup():
     markup.insert(types.KeyboardButton("Выбрать подарок другу"))
     markup.insert(types.KeyboardButton("Назад в стартовое меню"))
     return markup
+
+
+def last_viewed_friends_markup(last_viewed_data):
+    markup = types.InlineKeyboardMarkup(row_width=2)
+    for user_data in last_viewed_data:
+        markup.insert(types.InlineKeyboardButton(
+            user_data['friend_name'],
+            callback_data=classes.LastViewedId.new(
+                friend_user_id=user_data['friend_user_id']
+            )
+        ))
+    if len(last_viewed_data) % 2 == 1:
+        markup.insert(types.InlineKeyboardButton(
+            '❌',
+            callback_data=classes.EmptyCallback.new()
+        )) 
+    markup.add(types.InlineKeyboardButton(
+        'Назад в стартовое меню',
+        callback_data=classes.ToStart.new()
+    ))
+    return markup

@@ -31,13 +31,27 @@ c = Controller(bot=bot)
 @dp.message_handler(Text(equals='Назад в стартовое меню'), state='*')
 @rate_limit(1, 'start')
 async def command_start_process(message: types.Message, state: FSMContext):
-    response = await c.command_start(message=message, state=state)
+    tg_id = message.from_user.id
+    name = message.from_user.first_name
+    response = await c.command_start(tg_id=tg_id, name=name, state=state)
     await message.reply(
         text=response["text"],
         reply_markup=response["markup"],
         parse_mode="HTML",
         reply=False
     )
+
+
+@dp.callback_query_handler(classes.ToStart.filter(), state='*')
+@rate_limit(1, 'start_cb')
+async def command_start_process(query: types.CallbackQuery, state: FSMContext, callback_data: dict):
+    tg_id = query.from_user.id
+    name = query.from_user.first_name
+    response = await c.command_start(tg_id=tg_id, name=name, state=state)
+    await bot.send_message(chat_id=tg_id,
+                           text=response['text'],
+                           reply_markup=response['markup'],
+                           parse_mode='HTML')
 
 
 @dp.message_handler(commands='instruction', state='*')
@@ -322,8 +336,10 @@ async def enter_friends_code_process(message: types.Message, state: FSMContext):
 @rate_limit(1, 'friend_wishlist')
 async def display_friends_wishlist_process(message: types.Message, state: FSMContext):
     try:
+        tg_id = message.from_user.id
         friend_user_id = await c.get_friend_user_id(message=message, state=state)
-        response = await c.display_friends_wishlist(my_tg_id=message.from_user.id, friend_user_id=friend_user_id)
+        await c.add_last_viewed_id(my_tg_id=tg_id, friend_user_id=friend_user_id)
+        response = await c.display_friends_wishlist(my_tg_id=tg_id, friend_user_id=friend_user_id)
     except classes.ProhibitedSymbols:
         response = dict(
             text='Код должен состоять только из 6 цифр. Попробуй еще раз.',
@@ -342,6 +358,21 @@ async def display_friends_wishlist_process(message: types.Message, state: FSMCon
         parse_mode="HTML",
         reply=False
     )
+
+
+@dp.callback_query_handler(classes.LastViewedId.filter(), state='*')
+@rate_limit(1, 'latest_friend_wishlist')
+async def display_latest_friend_wishlist_process(
+    query: types.CallbackQuery, callback_data: dict
+    ):
+    tg_id = query.from_user.id
+    friend_user_id = callback_data['friend_user_id']
+    await c.add_last_viewed_id(my_tg_id=tg_id, friend_user_id=friend_user_id)
+    response = await c.display_friends_wishlist(my_tg_id=tg_id, friend_user_id=friend_user_id)
+    await bot.send_message(chat_id=tg_id,
+                            text=response['text'],
+                            reply_markup=response['markup'],
+                            parse_mode='HTML')
 
 
 @dp.callback_query_handler(classes.WishToReserve.filter(), state='*')
@@ -363,6 +394,7 @@ async def reserve_wish_process(query: types.CallbackQuery, state: FSMContext, ca
                             parse_mode='HTML')
     else:
         await query.answer('Простите, кто-то уже выбрал этот подарок, попробуйте другой.')
+
 
 @dp.callback_query_handler(classes.WishToUnreserve.filter(), state='*')
 @rate_limit(1, 'unreserve_wish')

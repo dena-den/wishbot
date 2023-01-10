@@ -27,3 +27,19 @@ QUERY_UPSERT_HASH = """
   REPLACE INTO keyboard_hash (tg_id, hash)
   VALUES ({tg_id}, Null)
 """
+
+
+QUERY_UPSERT_LAST_VIEWED = """
+  REPLACE INTO last_viewed (user_id, friend_user_id, friend_name, view_datetime)
+  VALUES ({user_id}, {friend_user_id}, '{friend_name}', '{view_datetime}')
+"""
+
+
+QUERY_GET_USER_LAST_VIEWED_ID = """
+  SELECT lw.friend_user_id, lw.friend_name
+  FROM last_viewed lw
+    JOIN users u ON u.tg_id = {tg_id}
+                AND u.id = lw.user_id            
+  ORDER BY lw.view_datetime DESC 
+  LIMIT 10
+"""
