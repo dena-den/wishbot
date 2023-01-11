@@ -8,12 +8,13 @@ Base = declarative_base()
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True)
-    name = Column(String, nullable=False)
-    birthdate = Column(Date, nullable=False)
+    name = Column(String, nullable=True)
+    last_name = Column(String, nullable=True)
+    birthdate = Column(Date, nullable=True)
     phone = Column(String, nullable=True)
     tg_id = Column(BigInteger, nullable=False)
-    tg_nickname = Column(String, nullable=False)
-    registration_datetime = Column(DateTime)
+    tg_nickname = Column(String, nullable=True)
+    registration_datetime = Column(DateTime, nullable=True)
     is_admin = Column(Boolean, default=False)
 
 
@@ -32,15 +33,14 @@ class WishHistory(Base):
     id = Column(Integer, primary_key=True)
     tg_id_who_chose = Column(BigInteger, nullable=False)
     wish_id = Column(Integer, ForeignKey("wishlists.id"), nullable=False)
-    start_datetime = Column(DateTime)
+    start_datetime = Column(DateTime, nullable=True)
     end_datetime = Column(DateTime, default=None)
 
 
 class LastViewed(Base):
     __tablename__ = "last_viewed"
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    friend_user_id = Column(Integer, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
+    friend_user_id = Column(Integer, primary_key=True)
     friend_name = Column(String, nullable=False)
     view_datetime = Column(DateTime, default=None)
 

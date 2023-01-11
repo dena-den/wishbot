@@ -10,8 +10,6 @@ from app.logic.middlewares import LoggingMiddleware, ThrottlingMiddleware
 from app.logic.controller import Controller
 from app.const import classes, states
 from app.logic import markups
-from ratelimit import limits
-from ratelimit.exception import RateLimitException
 
 #! temp
 from dotenv import load_dotenv
@@ -28,224 +26,121 @@ c = Controller(bot=bot)
 
 
 @dp.message_handler(commands='start', state='*')
-@dp.message_handler(Text(equals='Назад в стартовое меню'), state='*')
+@dp.callback_query_handler(classes.Start.filter(), state='*')
 @rate_limit(1, 'start')
-async def command_start_process(message: types.Message, state: FSMContext):
-    tg_id = message.from_user.id
-    name = message.from_user.first_name
-    response = await c.command_start(tg_id=tg_id, name=name, state=state)
-    await message.reply(
-        text=response["text"],
-        reply_markup=response["markup"],
-        parse_mode="HTML",
-        reply=False
-    )
-
-
-@dp.callback_query_handler(classes.ToStart.filter(), state='*')
-@rate_limit(1, 'start_cb')
-async def command_start_process(query: types.CallbackQuery, state: FSMContext, callback_data: dict):
+async def command_start_process(query: types.CallbackQuery, state: FSMContext):
     tg_id = query.from_user.id
     name = query.from_user.first_name
     response = await c.command_start(tg_id=tg_id, name=name, state=state)
-    await bot.send_message(chat_id=tg_id,
-                           text=response['text'],
-                           reply_markup=response['markup'],
-                           parse_mode='HTML')
+    await bot.send_message(
+        chat_id=tg_id,
+        text=response['text'],
+        reply_markup=response['markup'],
+        parse_mode='HTML'
+    )
 
 
 @dp.message_handler(commands='instruction', state='*')
-@dp.message_handler(Text(equals='Как со мной общаться?'), state='*')
+@dp.callback_query_handler(classes.Instruction.filter(), state='*')
 @rate_limit(1, 'instruction')
-async def get_instruction_process(message: types.Message):
-    response = await c.get_instruction()
-    await message.reply(
-        text=response["text"],
-        reply_markup=response["markup"],
-        parse_mode="HTML",
-        reply=False
+async def get_instruction_process(query: types.CallbackQuery, state: FSMContext):
+    tg_id = query.from_user.id
+    await query.answer()
+    response = await c.get_instruction(state=state)
+    await bot.send_message(
+        chat_id=tg_id,
+        text=response['text'],
+        reply_markup=response['markup'],
+        parse_mode='HTML'
     )
 
 
 @dp.message_handler(commands='invitation', state='*')
-@dp.message_handler(Text(equals='Разослать список друзьям'), state='*')
+@dp.callback_query_handler(classes.Invitation.filter(), state='*')
 @rate_limit(1, 'invitation')
-async def create_invitation_process(message: types.Message):
-    tg_id = message.from_user.id
-    response = await c.create_invitation(tg_id=tg_id)
-    await message.reply(
-        text=response["text"],
-        reply_markup=response["markup"],
-        parse_mode="HTML",
-        reply=False
+async def create_invitation_process(query: types.CallbackQuery, state: FSMContext):
+    tg_id = query.from_user.id
+    await query.answer()
+    response = await c.create_invitation(tg_id=tg_id, state=state)
+    await bot.send_message(
+        chat_id=tg_id,
+        text=response['text'],
+        reply_markup=response['markup'],
+        parse_mode='HTML'
     )
-
-
-@dp.message_handler(Text(equals='Создать мой список желаний'), state='*')
-@dp.message_handler(Text(equals='Назад к вводу имени'), state='*')
-@rate_limit(1, 'name')
-async def enter_name_process(message: types.Message, state: FSMContext):
-    is_user_exist = await c.check_is_user_exist(tg_id=message.from_user.id)
-    if not is_user_exist:
-        response = await c.enter_name(message=message, state=state)
-    else:
-        tg_id = message.from_user.id
-        response = await c.display_my_wishlist(tg_id=tg_id, state=state)
-    await message.reply(
-        text=response["text"],
-        reply_markup=response["markup"],
-        parse_mode="HTML",
-        reply=False
-    )
-
-
-@dp.message_handler(lambda msg: not msg.text.startswith(('Назад', '/')),
-                    state=states.User.name)
-@dp.message_handler(Text(equals='Назад к вводу даты рождения'), state='*')
-@rate_limit(1, 'birthdate')
-async def enter_birthdate_process(message: types.Message, state: FSMContext):
-    response = await c.enter_birthdate(message=message, state=state)
-    await message.reply(
-        text=response["text"],
-        reply_markup=response["markup"],
-        parse_mode="HTML",
-        reply=False
-    )
-
-
-@dp.message_handler(lambda msg: not msg.text.startswith(('Назад', '/')),
-                    state=states.User.birthdate)
-@dp.message_handler(Text(equals='Назад к вводу телефона'), state='*')
-@rate_limit(1, 'phone')
-async def enter_phone_process(message: types.Message, state: FSMContext):
-    response = await c.enter_phone(message=message, state=state)
-    await message.reply(
-        text=response["text"],
-        reply_markup=response["markup"],
-        parse_mode="HTML",
-        reply=False
-    )
-
-
-@dp.message_handler(content_types=['contact'], 
-                    state=states.User.phone)
-@rate_limit(1, 'check_pd')
-async def check_data_with_phone_process(message: types.Message, state: FSMContext):
-    response = await c.check_data(message=message, state=state)
-    await message.reply(
-        text=response["text"],
-        reply_markup=response["markup"],
-        parse_mode="HTML",
-        reply=False
-    )
-        
-
-@dp.message_handler(lambda msg: not msg.text.startswith(('Назад', '/', 'Все')),
-                    state=states.User.phone)
-@rate_limit(1, 'check_pd_no_phone')
-async def check_data_no_phone_process(message: types.Message, state: FSMContext):
-    if message.text == 'Использовать шестизначный код':
-        response = await c.check_data(message=message, state=state)
-    else:
-        response = dict(
-            text='Пожалуйста, воспользуйся кнопкой "Поделиться номером телефона".',
-            markup=markups.back_to_markup(to='birthdate')
-        )
-    await message.reply(
-        text=response["text"],
-        reply_markup=response["markup"],
-        parse_mode="HTML",
-        reply=False
-    )
-
 
 
 @dp.message_handler(commands='my_wishes', state='*')
-@dp.message_handler(Text(equals='Открыть мой список желаний'), state='*')
-@dp.message_handler(Text(equals='Все правильно'), state=states.User.phone)
-@dp.message_handler(Text(equals='Назад к списку'), state='*')
-@rate_limit(1, 'my_wishes')
-async def display_my_wishlist_process(message: types.Message, state: FSMContext):
-    if message.text == 'Все правильно':
-        await c.add_user_to_db(message=message, state=state)
-    is_user_exist = await c.check_is_user_exist(tg_id=message.from_user.id)
-    if is_user_exist:
-        tg_id = message.from_user.id
-        response = await c.display_my_wishlist(tg_id=tg_id, state=state)
-    else:
-        response = await c.command_start(message=message, state=state)
-        response['text'] = 'Для начала нужно создать список подарков'
-    await message.reply(
-        text=response["text"],
-        reply_markup=response["markup"],
-        parse_mode="HTML",
-        reply=False
-    )
-
-
-@dp.callback_query_handler(classes.ToMyWishes.filter(), state='*')
-@rate_limit(1, 'my_wishes_cb')
+@dp.callback_query_handler(classes.MyWishlist.filter(), state='*')
+@rate_limit(1, 'my_wishlist')
 async def display_my_wishlist_callback_process(
-    query: types.CallbackQuery, state: FSMContext, callback_data: dict
+    query: types.CallbackQuery, state: FSMContext
     ):
     tg_id = query.from_user.id
-    query.answer()
+    is_user_exist = await c.check_is_user_exist(tg_id=tg_id)
+    if not is_user_exist:
+        await c.add_user_to_db(query=query)
     response = await c.display_my_wishlist(tg_id=tg_id, state=state)
-    await bot.send_message(chat_id=tg_id,
-                           text=response['text'],
-                           reply_markup=response['markup'],
-                           parse_mode='HTML')
+    await query.answer()
+    await bot.send_message(
+        chat_id=tg_id,
+        text=response['text'],
+        reply_markup=response['markup'],
+        parse_mode='HTML'
+    )
 
 
-@dp.message_handler(Text(equals='Добавить желание'))
+@dp.callback_query_handler(classes.AddWish.filter(), state='*')
 @rate_limit(1, 'add_wish')
-async def enter_wish_name_process(message: types.Message, state: FSMContext):
-    response = await c.enter_wish_name(message=message, state=state)
-    await message.reply(
-        text=response["text"],
-        reply_markup=response["markup"],
-        parse_mode="HTML",
-        reply=False
+async def enter_wish_name_process(query: types.CallbackQuery, state: FSMContext):
+    tg_id = query.from_user.id
+    response = await c.enter_wish_name(state=state)
+    await bot.send_message(
+        chat_id=tg_id,
+        text=response['text'],
+        reply_markup=response['markup'],
+        parse_mode='HTML'
     )
 
 
-@dp.message_handler(lambda msg: not msg.text.startswith(('Назад', '/')),
-                    state=states.Wish.wish_name_to_add)
+@dp.callback_query_handler(state=states.Wish.wish_name_to_add)
 @rate_limit(1, 'add_wish_process')
-async def add_wish_process(message: types.Message, state: FSMContext):
-    await c.add_wish(message=message, state=state, is_list_of_wishes=0)
-    response = await c.display_my_wishlist(tg_id=message.from_user.id, state=state)
-    await message.reply(
-        text=response["text"],
-        reply_markup=response["markup"],
-        parse_mode="HTML",
-        reply=False
+async def add_wish_process(query: types.CallbackQuery, state: FSMContext):
+    tg_id = query.from_user.id
+    await c.add_wish(query=query, is_list_of_wishes=0)
+    response = await c.display_my_wishlist(tg_id=tg_id, state=state)
+    await bot.send_message(
+        chat_id=tg_id,
+        text=response['text'],
+        reply_markup=response['markup'],
+        parse_mode='HTML'
     )
 
 
-@dp.message_handler(Text(equals='Добавить желания списком'))
+@dp.callback_query_handler(classes.AddWish.filter(), state='*')
 @rate_limit(1, 'add_wishes')
-async def enter_list_wish_name_process(message: types.Message, state: FSMContext):
-    response = await c.enter_list_wish_name(message=message, state=state)
-    await message.reply(
-        text=response["text"],
-        reply_markup=response["markup"],
-        parse_mode="HTML",
-        reply=False
+async def enter_list_wish_name_process(query: types.CallbackQuery, state: FSMContext):
+    tg_id = query.from_user.id
+    response = await c.enter_list_wish_name(state=state)
+    await bot.send_message(
+        chat_id=tg_id,
+        text=response['text'],
+        reply_markup=response['markup'],
+        parse_mode='HTML'
     )
 
 
-@dp.message_handler(lambda msg: not msg.text.startswith(('Назад', '/')),
-                    state=states.Wish.wish_names_to_add)
+@dp.callback_query_handler(state=states.Wish.wish_names_to_add)
 @rate_limit(1, 'add_wishes_process')
-async def add_wish_list_process(message: types.Message, state: FSMContext):
-    await c.add_wish(message=message, state=state, is_list_of_wishes=1)
-    response = await c.display_my_wishlist(tg_id=message.from_user.id, state=state)
-    await message.reply(
-        text=response["text"],
-        reply_markup=response["markup"],
-        parse_mode="HTML",
-        reply=False
+async def add_wish_list_process(query: types.CallbackQuery, state: FSMContext):
+    tg_id = query.from_user.id
+    await c.add_wish(query=query, is_list_of_wishes=1)
+    response = await c.display_my_wishlist(tg_id=tg_id, state=state)
+    await bot.send_message(
+        chat_id=tg_id,
+        text=response['text'],
+        reply_markup=response['markup'],
+        parse_mode='HTML'
     )
 
 
@@ -267,10 +162,12 @@ async def delete_wish_process(query: types.CallbackQuery, state: FSMContext, cal
         await query.answer('Подарок удален')
         await c.delete_wish(wish_id=callback_data['wish_id'])
         response = await c.display_my_wishlist(tg_id=tg_id, state=state)
-    await bot.send_message(chat_id=tg_id,
-                        text=response['text'],
-                        reply_markup=response['markup'],
-                        parse_mode='HTML')
+    await bot.send_message(
+        chat_id=tg_id,
+        text=response['text'],
+        reply_markup=response['markup'],
+        parse_mode='HTML'
+    )
 
 
 @dp.callback_query_handler(classes.AddLink.filter(), state='*')
@@ -283,80 +180,83 @@ async def input_wish_link_process(query: types.CallbackQuery, state: FSMContext,
         return
     await query.answer()
     response = await c.input_wish_link(state=state, wish_id=callback_data['wish_id'])
-    await bot.send_message(chat_id=query.from_user.id,
-                           text=response['text'],
-                           reply_markup=response['markup'],
-                           parse_mode='HTML')
+    await bot.send_message(
+        chat_id=tg_id,
+        text=response['text'],
+        reply_markup=response['markup'],
+        parse_mode='HTML'
+    )
 
 
-@dp.message_handler(lambda msg: not msg.text.startswith(('Назад', '/')),
-                    state=states.Wish.wish_link_to_add)
+@dp.callback_query_handler(state=states.Wish.wish_link_to_add) # TO FO - add filter
 @rate_limit(1, 'add_wish_link')
-async def add_wish_link_process(message: types.Message, state: FSMContext):
-    await c.add_wish_link(state=state, wish_link=message.text)
-    response = await c.display_my_wishlist(tg_id=message.from_user.id, state=state)
-    await message.reply(
-        text=response["text"],
-        reply_markup=response["markup"],
-        parse_mode="HTML",
-        reply=False
+async def add_wish_link_process(query: types.CallbackQuery, state: FSMContext):
+    tg_id = query.from_user.id
+    await c.add_wish_link(state=state, wish_link=query.text)
+    response = await c.display_my_wishlist(tg_id=tg_id, state=state)
+    await bot.send_message(
+        chat_id=tg_id,
+        text=response['text'],
+        reply_markup=response['markup'],
+        parse_mode='HTML'
     )
 
 
 @dp.message_handler(commands='reserved_wishes', state='*')
-@dp.message_handler(Text(equals='Забронированные мною подарки'), state='*')
+@dp.callback_query_handler(classes.ReservedWishes.filter(), state='*')
 @rate_limit(1, 'reserved_wishes')
-async def display_wishes_reserved_by_me_process(message: types.Message, state: FSMContext):
-    tg_id = message.from_user.id
+async def display_wishes_reserved_by_me_process(query: types.CallbackQuery, state: FSMContext):
+    tg_id = query.from_user.id
+    await query.answer()
     response = await c.display_wishes_reserved_by_me(tg_id=tg_id, state=state)
-    await message.reply(
-        text=response["text"],
-        reply_markup=response["markup"],
-        parse_mode="HTML",
-        reply=False
+    await bot.send_message(
+        chat_id=tg_id,
+        text=response['text'],
+        reply_markup=response['markup'],
+        parse_mode='HTML'
     )
 
 
 @dp.message_handler(commands='friend_wishes', state='*')
-@dp.message_handler(Text(equals='Выбрать подарок другу'))
-@dp.message_handler(Text(equals='Назад к введению кода'), state='*')
+@dp.callback_query_handler(classes.ChooseWish.filter(), state='*')
 @rate_limit(1, 'find_friend_wishlist')
-async def enter_friends_code_process(message: types.Message, state: FSMContext):
-    response = await c.enter_friends_code(message=message, state=state)
-    await message.reply(
-        text=response["text"],
-        reply_markup=response["markup"],
-        parse_mode="HTML",
-        reply=False
+async def enter_friends_code_process(query: types.CallbackQuery, state: FSMContext):
+    tg_id = query.from_user.id
+    await query.answer()
+    response = await c.enter_friends_code(tg_id=tg_id, state=state)
+    await bot.send_message(
+        chat_id=tg_id,
+        text=response['text'],
+        reply_markup=response['markup'],
+        parse_mode='HTML'
     )
 
 
-@dp.message_handler(lambda msg: not msg.text.startswith(('Назад', '/')),
-                    state=states.Friend.friend_code)
+@dp.callback_query_handler(state=states.Friend.friend_code)
 @rate_limit(1, 'friend_wishlist')
-async def display_friends_wishlist_process(message: types.Message, state: FSMContext):
+async def display_friends_wishlist_process(query: types.CallbackQuery, state: FSMContext):
     try:
-        tg_id = message.from_user.id
-        friend_user_id = await c.get_friend_user_id(message=message, state=state)
+        tg_id = query.from_user.id
+        friend_user_id = await c.get_friend_user_id(query=query, state=state)
         await c.add_last_viewed_id(my_tg_id=tg_id, friend_user_id=friend_user_id)
         response = await c.display_friends_wishlist(my_tg_id=tg_id, friend_user_id=friend_user_id)
-    except classes.ProhibitedSymbols:
+    except classes.CodeNotValid:
         response = dict(
             text='Код должен состоять только из 6 цифр. Попробуй еще раз.',
-            markup=markups.back_to_markup(to='start')
+            markup=markups.back_to_start_markup()
         )
     except classes.UserNotFound:
         response = dict(
             text='Пользователя с таким кодом не найдено. Ничего не перепутал? Попробуй еще раз.',
-            markup=markups.back_to_markup(to='start')
+            markup=markups.back_to_start_markup()
         )
     except classes.UserIsYou:
-        response = await c.display_my_wishlist(tg_id=message.from_user.id, state=state)
-    await message.reply(
-        text=response["text"],
-        reply_markup=response["markup"],
-        parse_mode="HTML",
-        reply=False
+        response = await c.display_my_wishlist(tg_id=tg_id, state=state)
+    await bot.send_message(
+        chat_id=tg_id,
+        text=response['text'],
+        reply_markup=response['markup'],
+        parse_mode='HTML'
     )
 
 
@@ -369,10 +269,12 @@ async def display_latest_friend_wishlist_process(
     friend_user_id = callback_data['friend_user_id']
     await c.add_last_viewed_id(my_tg_id=tg_id, friend_user_id=friend_user_id)
     response = await c.display_friends_wishlist(my_tg_id=tg_id, friend_user_id=friend_user_id)
-    await bot.send_message(chat_id=tg_id,
-                            text=response['text'],
-                            reply_markup=response['markup'],
-                            parse_mode='HTML')
+    await bot.send_message(
+        chat_id=tg_id,
+        text=response['text'],
+        reply_markup=response['markup'],
+        parse_mode='HTML'
+    )
 
 
 @dp.callback_query_handler(classes.WishToReserve.filter(), state='*')
@@ -388,10 +290,12 @@ async def reserve_wish_process(query: types.CallbackQuery, state: FSMContext, ca
         await c.reserve_wish(wish_id=callback_data['wish_id'], tg_id=tg_id)
         await query.answer('Подарок выбран')
         response = await c.display_wishes_reserved_by_me(tg_id=tg_id, state=state)
-        await bot.send_message(chat_id=tg_id,
-                            text=response['text'],
-                            reply_markup=response['markup'],
-                            parse_mode='HTML')
+        await bot.send_message(
+            chat_id=tg_id,
+            text=response['text'],
+            reply_markup=response['markup'],
+            parse_mode='HTML'
+        )
     else:
         await query.answer('Простите, кто-то уже выбрал этот подарок, попробуйте другой.')
 
@@ -404,13 +308,15 @@ async def unreserve_wish_process(query: types.CallbackQuery, state: FSMContext, 
     received_hash = int(callback_data['hashed'])
     if db_hash != received_hash:
         return
-    await query.answer('Подарок отменен')
     await c.unreserve_wish(wish_id=callback_data['wish_id'], tg_id=tg_id)
+    await query.answer('Подарок отменен')
     response = await c.display_wishes_reserved_by_me(tg_id=tg_id, state=state)
-    await bot.send_message(chat_id=tg_id,
-                        text=response['text'],
-                        reply_markup=response['markup'],
-                        parse_mode='HTML')
+    await bot.send_message(
+        chat_id=tg_id,
+        text=response['text'],
+        reply_markup=response['markup'],
+        parse_mode='HTML'
+    )
 
 
 """@dp.message_handler(Text(equals="Notification"))

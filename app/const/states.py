@@ -1,10 +1,10 @@
 from aiogram.dispatcher.filters.state import State, StatesGroup
 
 
-class User(StatesGroup):
-    name = State()
-    birthdate = State()
-    phone = State()
+# class User(StatesGroup):
+#     name = State()
+#     birthdate = State()
+#     phone = State()
 
 
 class Wish(StatesGroup):

@@ -17,7 +17,7 @@ def get_moscow_datetime():
     current_time = local_time.astimezone(spb_timezone)
     return current_time
 
-
+# not used
 def birthdate_processing(input: str):
     prohibited_symbols = r'[a-zA-ZёЁа-яА-Я]'
     if re.search(prohibited_symbols, input):
@@ -37,7 +37,7 @@ def birthdate_processing(input: str):
     except ValueError:
         return False
 
-
+# not used
 def format_birthdate(input):
     if input.year == 1000:
         birthdate = input.strftime('%d.%m')
@@ -47,9 +47,9 @@ def format_birthdate(input):
 
 
 def code_processing(input: str):
-    prohibited_symbols = r'[a-zA-ZёЁа-яА-Я]'
-    if re.search(prohibited_symbols, input):
-        raise classes.ProhibitedSymbols
-    numbers_pattern = r'[0-9]'
-    code_numbers = ''.join(re.findall(numbers_pattern, input))
-    return code_numbers
+    code_pattern = r'[0-9]{6}'
+    is_valid = re.fullmatch(code_pattern, input)
+    if is_valid:
+        return int(input)
+    else:
+        raise classes.CodeNotValid
