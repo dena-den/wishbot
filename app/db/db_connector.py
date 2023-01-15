@@ -237,26 +237,18 @@ class Database:
     def add_last_viewed_id(self, user_id, friend_user_id):
         with self.session() as session:
             with session.begin():
-                friend_name = session \
-                    .execute(select(User.name)
-                    .where(User.id.__eq__(friend_user_id))) \
-                    .scalar()
                 to_exec = QUERY_UPSERT_LAST_VIEWED.format(
                         user_id=user_id,
                         friend_user_id=friend_user_id,
-                        friend_name=friend_name,
                         view_datetime=get_moscow_datetime()
                         )
-                logging.info(f'!! to_exec = {to_exec}')
                 session.execute(to_exec)
 
     def get_user_last_viewed_id(self, tg_id):
         with self.session() as session:
             with session.begin():
                 to_exec = QUERY_GET_USER_LAST_VIEWED_ID.format(tg_id=tg_id)
-                logging.info(f'to_exec = {to_exec}')
                 query = session \
                     .execute(to_exec) \
                     .fetchall()
-                logging.info(f'query = {query}')
                 return [dict(row) for row in query if query]

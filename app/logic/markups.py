@@ -10,7 +10,7 @@ def start_menu_markup():
     )
     markup.insert(types.InlineKeyboardButton(
         "Выбрать подарок другу",
-        callback_data=classes.ChooseWish.new())
+        callback_data=classes.FindFriend.new())
     )
     markup.insert(types.InlineKeyboardButton(
         "Забронированные подарки",
@@ -82,7 +82,8 @@ def delete_wish_button(
         callback_data=classes.WishToDelete.new(
             wish_id=wish_id,
             hashed=hashed,
-            is_reserved=is_wish_reserved
+            is_reserved=is_wish_reserved,
+            message_to_delete=''
         )
     ))
     markup.insert(types.InlineKeyboardButton(
@@ -95,14 +96,15 @@ def delete_wish_button(
     return markup
 
 
-def deleting_approval_button(wish_id: int, hashed: int):
+def deleting_approval_button(wish_id: int, hashed: int, message_to_delete: int):
     markup = types.InlineKeyboardMarkup(row_width=2)
     markup.add(types.InlineKeyboardButton(
         'Да, удаляй',
         callback_data=classes.WishToDelete.new(
             wish_id=wish_id,
             hashed=hashed,
-            is_reserved=False
+            is_reserved=False,
+            message_to_delete=message_to_delete
         )
     ))
     markup.insert(types.InlineKeyboardButton(
@@ -140,7 +142,7 @@ def friend_wishlist_markup():
     markup = types.InlineKeyboardMarkup(row_width=2)
     markup.insert(types.InlineKeyboardButton(
         "Другой вишлист",
-        callback_data=classes.ChooseWish.new())
+        callback_data=classes.FindFriend.new())
     )
     markup.insert(types.InlineKeyboardButton(
         "Главное меню",
@@ -153,7 +155,7 @@ def wishes_reseved_by_me_markup():
     markup = types.InlineKeyboardMarkup(row_width=2)
     markup.insert(types.InlineKeyboardButton(
         "Выбрать вишлист друга",
-        callback_data=classes.ChooseWish.new())
+        callback_data=classes.FindFriend.new())
     )
     markup.insert(types.InlineKeyboardButton(
         "Главное меню",
@@ -165,10 +167,12 @@ def wishes_reseved_by_me_markup():
 def last_viewed_friends_markup(last_viewed_data):
     markup = types.InlineKeyboardMarkup(row_width=2)
     for user_data in last_viewed_data:
+        friend_user_id = user_data.pop('friend_user_id')
+        full_user_name = ' '.join(filter(lambda data: data, user_data.values()))
         markup.insert(types.InlineKeyboardButton(
-            user_data['friend_name'],
+            full_user_name,
             callback_data=classes.LastViewedId.new(
-                friend_user_id=user_data['friend_user_id']
+                friend_user_id=friend_user_id
             )
         ))
     if len(last_viewed_data) % 2 == 1:

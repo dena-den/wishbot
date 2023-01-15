@@ -41,7 +41,6 @@ class LastViewed(Base):
     __tablename__ = "last_viewed"
     user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
     friend_user_id = Column(Integer, primary_key=True)
-    friend_name = Column(String, nullable=False)
     view_datetime = Column(DateTime, default=None)
 
 

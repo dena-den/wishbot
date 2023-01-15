@@ -30,16 +30,17 @@ QUERY_UPSERT_HASH = """
 
 
 QUERY_UPSERT_LAST_VIEWED = """
-  REPLACE INTO last_viewed (user_id, friend_user_id, friend_name, view_datetime)
-  VALUES ({user_id}, {friend_user_id}, '{friend_name}', '{view_datetime}')
+  REPLACE INTO last_viewed (user_id, friend_user_id, view_datetime)
+  VALUES ({user_id}, {friend_user_id}, '{view_datetime}')
 """
 
 
 QUERY_GET_USER_LAST_VIEWED_ID = """
-  SELECT lw.friend_user_id, lw.friend_name
+  SELECT lw.friend_user_id, u1.name, u1.last_name, u1.tg_nickname
   FROM last_viewed lw
     JOIN users u ON u.tg_id = {tg_id}
-                AND u.id = lw.user_id            
+                AND u.id = lw.user_id    
+    JOIN users u1 ON u1.id = lw.friend_user_id
   ORDER BY lw.view_datetime DESC 
   LIMIT 10
 """

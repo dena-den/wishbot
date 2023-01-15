@@ -2,19 +2,18 @@ import logging
 from os import getenv
 from aiogram import Bot, Dispatcher, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
-from aiogram.dispatcher import FSMContext
-from aiogram.dispatcher.filters import Text
+from aiogram.dispatcher import FSMContext, filters
 from aiogram.utils.exceptions import *
 from app.logic.decorators import *
 from app.logic.middlewares import LoggingMiddleware, ThrottlingMiddleware
 from app.logic.controller import Controller
 from app.const import classes, states
 from app.logic import markups
-
-#! temp
+from typing import Optional, Union
 from dotenv import load_dotenv
-load_dotenv()
 
+
+load_dotenv()
 logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=getenv("BOT_TOKEN"))
@@ -28,10 +27,16 @@ c = Controller(bot=bot)
 @dp.message_handler(commands='start', state='*')
 @dp.callback_query_handler(classes.Start.filter(), state='*')
 @rate_limit(1, 'start')
-async def command_start_process(query: types.CallbackQuery, state: FSMContext):
+async def command_start_process(
+    query: Union[types.CallbackQuery, types.Message],
+    state: FSMContext
+):
+    await state.finish()
     tg_id = query.from_user.id
+    if isinstance(query, types.CallbackQuery):
+        await query.answer()
     name = query.from_user.first_name
-    response = await c.command_start(tg_id=tg_id, name=name, state=state)
+    response = await c.command_start(tg_id=tg_id, name=name)
     await bot.send_message(
         chat_id=tg_id,
         text=response['text'],
@@ -43,10 +48,15 @@ async def command_start_process(query: types.CallbackQuery, state: FSMContext):
 @dp.message_handler(commands='instruction', state='*')
 @dp.callback_query_handler(classes.Instruction.filter(), state='*')
 @rate_limit(1, 'instruction')
-async def get_instruction_process(query: types.CallbackQuery, state: FSMContext):
+async def get_instruction_process(
+    query: Union[types.CallbackQuery, types.Message],
+    state: FSMContext
+):
+    await state.finish()
     tg_id = query.from_user.id
-    await query.answer()
-    response = await c.get_instruction(state=state)
+    if isinstance(query, types.CallbackQuery):
+        await query.answer()
+    response = await c.get_instruction()
     await bot.send_message(
         chat_id=tg_id,
         text=response['text'],
@@ -58,10 +68,15 @@ async def get_instruction_process(query: types.CallbackQuery, state: FSMContext)
 @dp.message_handler(commands='invitation', state='*')
 @dp.callback_query_handler(classes.Invitation.filter(), state='*')
 @rate_limit(1, 'invitation')
-async def create_invitation_process(query: types.CallbackQuery, state: FSMContext):
+async def create_invitation_process(
+    query: Union[types.CallbackQuery, types.Message],
+    state: FSMContext
+):
+    await state.finish()
     tg_id = query.from_user.id
-    await query.answer()
-    response = await c.create_invitation(tg_id=tg_id, state=state)
+    if isinstance(query, types.CallbackQuery):
+        await query.answer()
+    response = await c.create_invitation(tg_id=tg_id)
     await bot.send_message(
         chat_id=tg_id,
         text=response['text'],
@@ -74,14 +89,17 @@ async def create_invitation_process(query: types.CallbackQuery, state: FSMContex
 @dp.callback_query_handler(classes.MyWishlist.filter(), state='*')
 @rate_limit(1, 'my_wishlist')
 async def display_my_wishlist_callback_process(
-    query: types.CallbackQuery, state: FSMContext
-    ):
+    query: Union[types.CallbackQuery, types.Message],
+    state: FSMContext
+):
+    await state.finish()
     tg_id = query.from_user.id
+    if isinstance(query, types.CallbackQuery):
+        await query.answer()
     is_user_exist = await c.check_is_user_exist(tg_id=tg_id)
     if not is_user_exist:
         await c.add_user_to_db(query=query)
-    response = await c.display_my_wishlist(tg_id=tg_id, state=state)
-    await query.answer()
+    response = await c.display_my_wishlist(tg_id=tg_id)
     await bot.send_message(
         chat_id=tg_id,
         text=response['text'],
@@ -94,6 +112,7 @@ async def display_my_wishlist_callback_process(
 @rate_limit(1, 'add_wish')
 async def enter_wish_name_process(query: types.CallbackQuery, state: FSMContext):
     tg_id = query.from_user.id
+    await query.answer()
     response = await c.enter_wish_name(state=state)
     await bot.send_message(
         chat_id=tg_id,
@@ -103,12 +122,14 @@ async def enter_wish_name_process(query: types.CallbackQuery, state: FSMContext)
     )
 
 
-@dp.callback_query_handler(state=states.Wish.wish_name_to_add)
+@dp.message_handler(state=states.Wish.wish_name_to_add)
 @rate_limit(1, 'add_wish_process')
-async def add_wish_process(query: types.CallbackQuery, state: FSMContext):
-    tg_id = query.from_user.id
-    await c.add_wish(query=query, is_list_of_wishes=0)
-    response = await c.display_my_wishlist(tg_id=tg_id, state=state)
+async def add_wish_process(message: types.Message, state: FSMContext):
+    await state.finish()
+    tg_id = message.from_user.id
+    text = message.text
+    await c.add_wish(tg_id=tg_id, text=text, is_list_of_wishes=0)
+    response = await c.display_my_wishlist(tg_id=tg_id)
     await bot.send_message(
         chat_id=tg_id,
         text=response['text'],
@@ -117,10 +138,11 @@ async def add_wish_process(query: types.CallbackQuery, state: FSMContext):
     )
 
 
-@dp.callback_query_handler(classes.AddWish.filter(), state='*')
+@dp.callback_query_handler(classes.AddWishes.filter(), state='*')
 @rate_limit(1, 'add_wishes')
 async def enter_list_wish_name_process(query: types.CallbackQuery, state: FSMContext):
     tg_id = query.from_user.id
+    await query.answer()
     response = await c.enter_list_wish_name(state=state)
     await bot.send_message(
         chat_id=tg_id,
@@ -130,12 +152,13 @@ async def enter_list_wish_name_process(query: types.CallbackQuery, state: FSMCon
     )
 
 
-@dp.callback_query_handler(state=states.Wish.wish_names_to_add)
+@dp.message_handler(state=states.Wish.wish_names_to_add)
 @rate_limit(1, 'add_wishes_process')
-async def add_wish_list_process(query: types.CallbackQuery, state: FSMContext):
-    tg_id = query.from_user.id
-    await c.add_wish(query=query, is_list_of_wishes=1)
-    response = await c.display_my_wishlist(tg_id=tg_id, state=state)
+async def add_wish_list_process(message: types.Message, state: FSMContext):
+    tg_id = message.from_user.id
+    text = message.text
+    await c.add_wish(tg_id=tg_id, text=text, is_list_of_wishes=1)
+    response = await c.display_my_wishlist(tg_id=tg_id)
     await bot.send_message(
         chat_id=tg_id,
         text=response['text'],
@@ -153,21 +176,25 @@ async def delete_wish_process(query: types.CallbackQuery, state: FSMContext, cal
     if db_hash != received_hash:
         return
     if callback_data['is_reserved'] == 'True':
-        await query.answer()
+        message_to_delete = query.message.message_id
         response = await c.delete_wish_if_reserved(
             tg_id=tg_id,
-            wish_id=callback_data['wish_id']
-        )
-    else:
-        await query.answer('Подарок удален')
-        await c.delete_wish(wish_id=callback_data['wish_id'])
-        response = await c.display_my_wishlist(tg_id=tg_id, state=state)
-    await bot.send_message(
+            wish_id=callback_data['wish_id'],
+            message_to_delete=message_to_delete
+        )    
+        await query.answer()
+        await bot.send_message(
         chat_id=tg_id,
         text=response['text'],
         reply_markup=response['markup'],
         parse_mode='HTML'
     )
+    else:
+        await c.delete_wish(wish_id=callback_data['wish_id'])
+        await query.message.delete()
+        if callback_data['message_to_delete']:
+            # delete_message(message_id=callback_data['message_to_delete']) TO DO - try to use simple delete message (delete by username and message_id)
+        await query.answer('Подарок удален')
 
 
 @dp.callback_query_handler(classes.AddLink.filter(), state='*')
@@ -188,12 +215,13 @@ async def input_wish_link_process(query: types.CallbackQuery, state: FSMContext,
     )
 
 
-@dp.callback_query_handler(state=states.Wish.wish_link_to_add) # TO FO - add filter
+@dp.message_handler(state=states.Wish.wish_link_to_add)
 @rate_limit(1, 'add_wish_link')
-async def add_wish_link_process(query: types.CallbackQuery, state: FSMContext):
-    tg_id = query.from_user.id
-    await c.add_wish_link(state=state, wish_link=query.text)
-    response = await c.display_my_wishlist(tg_id=tg_id, state=state)
+async def add_wish_link_process(message: types.Message, state: FSMContext):
+    tg_id = message.from_user.id
+    text = message.text
+    await c.add_wish_link(text=text, state=state)
+    response = await c.display_my_wishlist(tg_id=tg_id)
     await bot.send_message(
         chat_id=tg_id,
         text=response['text'],
@@ -205,10 +233,15 @@ async def add_wish_link_process(query: types.CallbackQuery, state: FSMContext):
 @dp.message_handler(commands='reserved_wishes', state='*')
 @dp.callback_query_handler(classes.ReservedWishes.filter(), state='*')
 @rate_limit(1, 'reserved_wishes')
-async def display_wishes_reserved_by_me_process(query: types.CallbackQuery, state: FSMContext):
+async def display_wishes_reserved_by_me_process(
+    query: Union[types.CallbackQuery, types.Message],
+    state: FSMContext
+):
+    await state.finish()
     tg_id = query.from_user.id
-    await query.answer()
-    response = await c.display_wishes_reserved_by_me(tg_id=tg_id, state=state)
+    if isinstance(query, types.CallbackQuery):
+        await query.answer()
+    response = await c.display_wishes_reserved_by_me(tg_id=tg_id)
     await bot.send_message(
         chat_id=tg_id,
         text=response['text'],
@@ -217,12 +250,18 @@ async def display_wishes_reserved_by_me_process(query: types.CallbackQuery, stat
     )
 
 
-@dp.message_handler(commands='friend_wishes', state='*')
-@dp.callback_query_handler(classes.ChooseWish.filter(), state='*')
+@dp.message_handler(commands='find_friend', state='*')
+@dp.callback_query_handler(classes.FindFriend.filter(), state='*')
 @rate_limit(1, 'find_friend_wishlist')
-async def enter_friends_code_process(query: types.CallbackQuery, state: FSMContext):
+async def enter_friends_code_process(
+    query: Union[types.CallbackQuery, types.Message],
+    state: FSMContext
+):
+    await state.finish()
     tg_id = query.from_user.id
-    await query.answer()
+    if isinstance(query, types.CallbackQuery):
+        await query.answer()
+    await state.finish()
     response = await c.enter_friends_code(tg_id=tg_id, state=state)
     await bot.send_message(
         chat_id=tg_id,
@@ -232,12 +271,13 @@ async def enter_friends_code_process(query: types.CallbackQuery, state: FSMConte
     )
 
 
-@dp.callback_query_handler(state=states.Friend.friend_code)
+@dp.message_handler(state=states.Friend.friend_code)
 @rate_limit(1, 'friend_wishlist')
 async def display_friends_wishlist_process(query: types.CallbackQuery, state: FSMContext):
+    await state.finish()
     try:
         tg_id = query.from_user.id
-        friend_user_id = await c.get_friend_user_id(query=query, state=state)
+        friend_user_id = await c.get_friend_user_id(query=query)
         await c.add_last_viewed_id(my_tg_id=tg_id, friend_user_id=friend_user_id)
         response = await c.display_friends_wishlist(my_tg_id=tg_id, friend_user_id=friend_user_id)
     except classes.CodeNotValid:
@@ -251,7 +291,7 @@ async def display_friends_wishlist_process(query: types.CallbackQuery, state: FS
             markup=markups.back_to_start_markup()
         )
     except classes.UserIsYou:
-        response = await c.display_my_wishlist(tg_id=tg_id, state=state)
+        response = await c.display_my_wishlist(tg_id=tg_id)
     await bot.send_message(
         chat_id=tg_id,
         text=response['text'],
@@ -267,6 +307,7 @@ async def display_latest_friend_wishlist_process(
     ):
     tg_id = query.from_user.id
     friend_user_id = callback_data['friend_user_id']
+    await query.answer()
     await c.add_last_viewed_id(my_tg_id=tg_id, friend_user_id=friend_user_id)
     response = await c.display_friends_wishlist(my_tg_id=tg_id, friend_user_id=friend_user_id)
     await bot.send_message(
@@ -288,14 +329,8 @@ async def reserve_wish_process(query: types.CallbackQuery, state: FSMContext, ca
     is_wish_reserved = await c.check_is_wish_reserved(wish_id=callback_data['wish_id'])
     if not is_wish_reserved:
         await c.reserve_wish(wish_id=callback_data['wish_id'], tg_id=tg_id)
+        await query.message.delete()
         await query.answer('Подарок выбран')
-        response = await c.display_wishes_reserved_by_me(tg_id=tg_id, state=state)
-        await bot.send_message(
-            chat_id=tg_id,
-            text=response['text'],
-            reply_markup=response['markup'],
-            parse_mode='HTML'
-        )
     else:
         await query.answer('Простите, кто-то уже выбрал этот подарок, попробуйте другой.')
 
@@ -310,13 +345,19 @@ async def unreserve_wish_process(query: types.CallbackQuery, state: FSMContext, 
         return
     await c.unreserve_wish(wish_id=callback_data['wish_id'], tg_id=tg_id)
     await query.answer('Подарок отменен')
-    response = await c.display_wishes_reserved_by_me(tg_id=tg_id, state=state)
+    response = await c.display_wishes_reserved_by_me(tg_id=tg_id)
     await bot.send_message(
         chat_id=tg_id,
         text=response['text'],
         reply_markup=response['markup'],
         parse_mode='HTML'
     )
+
+
+@dp.callback_query_handler(classes.EmptyCallback.filter(), state='*')
+@rate_limit(1, 'empty_callback')
+async def empty_callback_process(query: types.CallbackQuery, state: FSMContext):
+    await query.answer()
 
 
 """@dp.message_handler(Text(equals="Notification"))

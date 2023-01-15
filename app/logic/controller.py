@@ -20,8 +20,7 @@ class Controller:
     def load_user_ids(self):
         memory.user_ids = self.db.get_all_user_ids()
 
-    async def command_start(self, tg_id, name, state):
-        await state.finish()
+    async def command_start(self, tg_id, name):
         self.db.add_empty_keyboard_hash(tg_id=tg_id)
         is_user_exist = self.db.is_user_exist_by_tg_id(tg_id=tg_id)
         if is_user_exist:
@@ -31,14 +30,12 @@ class Controller:
         markup = markups.start_menu_markup()
         return dict(text=text, markup=markup)
 
-    async def get_instruction(self, state):
-        await state.finish()
+    async def get_instruction(self):
         text = INSTRUCTION
         markup = markups.back_to_start_markup()
         return dict(text=text, markup=markup)
 
-    async def create_invitation(self, tg_id, state):
-        await state.finish()
+    async def create_invitation(self, tg_id):
         user_id = self.db.get_user_id_by_tg_id(tg_id=tg_id)
         if not user_id:
             text = 'Для начала тебе нужно создать свой список подарков.\nДля этого просто нажми кнопку ⬇️'
@@ -73,8 +70,7 @@ class Controller:
         )
         self.db.add_user(user_data=user_data)
 
-    async def display_my_wishlist(self, tg_id, state):
-        await state.finish()
+    async def display_my_wishlist(self, tg_id):
         hashed = hash(random())
         self.db.update_keyboard_hash(tg_id=tg_id, hashed=hashed)
         user_id = self.db.get_user_id_by_tg_id(tg_id=tg_id)
@@ -126,12 +122,11 @@ class Controller:
     async def enter_list_wish_name(self, state):
         text = 'Введи несколько желаний, каждое с новой строки (но не больше 20 за раз). ' \
                'Например:\n\n<i>Вертолетик на радиоуправлении\nСкейтборд\nКонструктор LEGO</i>'
-        markup = markups.back_to_markup(to='wishlist')
+        markup = markups.back_to_my_wishlist_markup()
         await state.set_state(states.Wish.wish_names_to_add)
         return dict(text=text, markup=markup)
 
-    async def add_wish(self, query, is_list_of_wishes):
-        tg_id = query.from_user.id  
+    async def add_wish(self, tg_id, text, is_list_of_wishes):
         user_id = self.db.get_user_id_by_tg_id(tg_id=tg_id)
 
         wishes_user_already_has = self.db.count_user_wishes(user_id=user_id)
@@ -146,9 +141,9 @@ class Controller:
                 )
         else:
             if is_list_of_wishes:
-                wishes = query.text.split('\n')
+                wishes = text.split('\n')
             else:
-                wishes = [query.text]
+                wishes = [text]
             for num, wish in enumerate(wishes, start=1):
                 if num == 20:
                     text = '<b>Я принял только 20 первых подарков.</b> Остальные отправь, пожалуйста, еще раз.'
@@ -181,13 +176,14 @@ class Controller:
         wish_name = self.db.get_wish_name_by_id(wish_id=wish_id)
         return wish_name
 
-    async def delete_wish_if_reserved(self, tg_id, wish_id):
+    async def delete_wish_if_reserved(self, tg_id, wish_id, message_to_delete):
         hashed = hash(random())
         self.db.update_keyboard_hash(tg_id=tg_id, hashed=hashed)
         text = 'Этот подарок забронирован одним из твоих друзей. Удаляй его только если твой праздник уже прошел.'
         markup = markups.deleting_approval_button(
             wish_id=wish_id,
-            hashed=hashed
+            hashed=hashed,
+            message_to_delete=message_to_delete
         )
         return dict(text=text, markup=markup)
 
@@ -203,13 +199,12 @@ class Controller:
         await state.set_state(states.Wish.wish_link_to_add)
         return dict(text=text, markup=markup)
 
-    async def add_wish_link(self, state, wish_link):
+    async def add_wish_link(self, text, state):
         async with state.proxy() as data:
-            self.db.add_wish_link(wish_id=data['wish_id'], link=wish_link)
+            self.db.add_wish_link(wish_id=data['wish_id'], link=text)
         await state.finish()
 
-    async def display_wishes_reserved_by_me(self, tg_id, state):
-        await state.finish()
+    async def display_wishes_reserved_by_me(self, tg_id):
         hashed = hash(random())
         self.db.update_keyboard_hash(tg_id=tg_id, hashed=hashed)
         wishes = self.db.get_wishes_reserved_by_me(tg_id=tg_id)
@@ -257,7 +252,7 @@ class Controller:
         await state.set_state(states.Friend.friend_code)
         return dict(text=text, markup=markup)
 
-    async def get_friend_user_id(self, query, state):
+    async def get_friend_user_id(self, query):
         tg_id = query.from_user.id
         friend_user_id = utils.code_processing(input=query.text)
 
@@ -268,8 +263,7 @@ class Controller:
         user_id = self.db.get_user_id_by_tg_id(tg_id=tg_id)
         if user_id == friend_user_id:
             raise classes.UserIsYou
-
-        await state.finish()
+            
         return friend_user_id
 
     async def add_last_viewed_id(self, my_tg_id, friend_user_id):
