@@ -2,13 +2,13 @@ from app.db.db_connector import Database
 from app.const.queries import *
 from app.logic import markups
 from app.const import states, classes
-import re
 from app.logic import utils
 import logging
 from app.const.consts import *
 from app.logic import memory
 from random import randint, random, choice
-from app.logic.utils import get_moscow_datetime, format_birthdate
+from app.logic.utils import get_moscow_datetime
+from aiogram.utils.exceptions import BotBlocked
 
 
 class Controller:
@@ -27,7 +27,8 @@ class Controller:
             text = choice(START_PHRASES)
         else:
             text = START_FOR_NEWBIES.format(name=name)
-        markup = markups.start_menu_markup()
+        is_admin = self.db.is_user_admin(tg_id=tg_id)
+        markup = markups.start_menu_markup(is_admin=is_admin)
         return dict(text=text, markup=markup)
 
     async def get_instruction(self):
@@ -52,23 +53,81 @@ class Controller:
             markup = markups.back_to_start_markup()
         return dict(text=text, markup=markup)
 
-    async def add_user_to_db(self, query):
-        while True:
-            user_id = randint(100000, 999999)
-            if user_id in memory.user_ids:
-                continue
-            else:
-                memory.user_ids.append(user_id)
-                break
+    async def prepare_mailing_to_users(self, state):
+        text = 'Введите сообщение, которое будет отправлено ВСЕМ пользователям, зарегистрированным в боте ' \
+               '(но не заблокировавшим его).\nВ сообщении можно использовать смайлы и <b>средства HTML</b>.'
+        markup = markups.back_to_start_markup()
+        await state.set_state(states.Admin.mailing_text)
+        return dict(text=text, markup=markup)
+
+    async def confirm_mailing_to_users(self, message, state):
+        async with state.proxy() as data:
+            data['message_to_users'] = message.text
+        text = f'Пример сообщения ниже. Отправляем?\n\n{message.text}'
+        markup = markups.mailing_confirmation()
+        return dict(text=text, markup=markup)
+
+    async def send_mailing_to_users(self, state):
+        try:
+            async with state.proxy() as data:
+                message_to_users = data['message_to_users']
+        except KeyError:
+            pass
+        await state.finish()
+
+        tg_id_list = self.db.get_all_users_tg_id()
+        for tg_id in tg_id_list:
+            try:
+                await self.bot.send_message(
+                    chat_id=tg_id, 
+                    text=message_to_users, 
+                    parse_mode='HTML'
+                )
+            except BotBlocked:
+                pass
+        text = 'Сообщение отправлено успешно!'
+        markup = markups.start_menu_markup(is_admin=1)
+        return dict(text=text, markup=markup)
+
+    async def check_is_user_actual(self, from_user):
+        print(f'from_user = {from_user}')
         user_data = dict(
-            id=user_id,
-            name=query.from_user.first_name,
-            last_name=query.from_user.last_name,
-            tg_id=query.from_user.id,
-            tg_nickname=query.from_user.username,
+            tg_id=from_user.id,
+            name=from_user.first_name,
+            last_name=from_user.last_name,
+            tg_nickname=from_user.username
+        )
+        print(f'! user_data = {user_data}')
+        is_user_actual = self.db.is_user_actual(user_data=user_data)
+        print(f'is_user_actual = {is_user_actual}')
+        return is_user_actual
+        
+
+    async def upsert_user_to_db(self, from_user):
+        user_data = dict(
+            name=from_user.first_name,
+            last_name=from_user.last_name,
+            tg_id=from_user.id,
+            tg_nickname=from_user.username,
             registration_datetime=get_moscow_datetime()
         )
-        self.db.add_user(user_data=user_data)
+        user_id = self.db.get_user_id_by_tg_id(tg_id=from_user.id)
+        print(f'user_id = {user_id}')
+        if user_id:
+            user_data['id'] = user_id
+            print(f'user_data = {user_data}')
+            self.db.update_user(user_data=user_data)
+        else:
+            while True:
+                user_id = randint(100000, 999999)
+                if user_id in memory.user_ids:
+                    continue
+                else:
+                    memory.user_ids.append(user_id)
+                    break
+            user_data['id'] = user_id
+            print(f'user_data = {user_data}')
+            self.db.add_user(user_data=user_data)
 
     async def display_my_wishlist(self, tg_id):
         hashed = hash(random())
@@ -76,13 +135,6 @@ class Controller:
         user_id = self.db.get_user_id_by_tg_id(tg_id=tg_id)
         wishes = self.db.get_wishes_by_tg_id(tg_id=tg_id)
         if wishes:
-            text = WISHES_TOP
-            await self.bot.send_message(
-                chat_id=tg_id,
-                text=text,
-                reply_markup=None,
-                parse_mode='HTML'
-            )
             for wish in wishes:
                 wish_id = wish.pop('id')
                 if wish['is_reserved']:
@@ -108,7 +160,7 @@ class Controller:
                 )  
             text = MY_WISHES_BOTTOM.format(user_id=user_id)
         else:
-            text = MY_WISHES_EMPTY_BOTTOM.format(user_id=user_id)
+            text = MY_WISHES_EMPTY_BOTTOM
         markup = markups.my_wishlist_markup()
         return dict(text=text, markup=markup)
 
@@ -120,7 +172,7 @@ class Controller:
         return dict(text=text, markup=markup)
 
     async def enter_list_wish_name(self, state):
-        text = 'Введи несколько желаний, каждое с новой строки (но не больше 20 за раз). ' \
+        text = 'Введи несколько желаний, каждое с новой строки. ' \
                'Например:\n\n<i>Вертолетик на радиоуправлении\nСкейтборд\nКонструктор LEGO</i>'
         markup = markups.back_to_my_wishlist_markup()
         await state.set_state(states.Wish.wish_names_to_add)
@@ -144,16 +196,7 @@ class Controller:
                 wishes = text.split('\n')
             else:
                 wishes = [text]
-            for num, wish in enumerate(wishes, start=1):
-                if num == 20:
-                    text = '<b>Я принял только 20 первых подарков.</b> Остальные отправь, пожалуйста, еще раз.'
-                    await self.bot.send_message(
-                        chat_id=tg_id,
-                        text=text,
-                        reply_markup=None,
-                        parse_mode='HTML'
-                    )
-                    break
+            for wish in wishes:
                 wishlist_data = dict(
                     user_id=user_id,
                     name=wish
@@ -164,9 +207,6 @@ class Controller:
         hashed = self.db.get_keyboard_hash(tg_id=tg_id)
         return hashed
 
-    async def check_is_user_exist(self, tg_id):
-        is_user_exist = self.db.is_user_exist_by_tg_id(tg_id=tg_id)
-        return is_user_exist
 
     async def check_is_wish_reserved(self, wish_id):
         is_wish_reserved = self.db.is_wish_reserved(wish_id=wish_id)
@@ -179,7 +219,7 @@ class Controller:
     async def delete_wish_if_reserved(self, tg_id, wish_id, message_to_delete):
         hashed = hash(random())
         self.db.update_keyboard_hash(tg_id=tg_id, hashed=hashed)
-        text = 'Этот подарок забронирован одним из твоих друзей. Удаляй его только если твой праздник уже прошел.'
+        text = '<b>Этот подарок забронирован одним из твоих друзей.</b> \nУдаляй его только если твой праздник уже прошел.'
         markup = markups.deleting_approval_button(
             wish_id=wish_id,
             hashed=hashed,
@@ -193,7 +233,7 @@ class Controller:
     async def input_wish_link(self, state, wish_id):
         text = 'Отправь мне описание, которое хочешь добавить. Это может быть ссылка на товар, ссылка на изображение в интернете или что угодно.\n' \
                'К сожалению, картинки с твоего телефона я пока обрабатывать не умею.'
-        markup = markups.back_to_start_markup()
+        markup = markups.back_to_my_wishlist_markup()
         async with state.proxy() as data:
             data['wish_id'] = wish_id
         await state.set_state(states.Wish.wish_link_to_add)
@@ -209,20 +249,14 @@ class Controller:
         self.db.update_keyboard_hash(tg_id=tg_id, hashed=hashed)
         wishes = self.db.get_wishes_reserved_by_me(tg_id=tg_id)
         if wishes:
-            text = WISHES_TOP
-            await self.bot.send_message(
-                chat_id=tg_id,
-                text=text,
-                reply_markup=None,
-                parse_mode='HTML'
-            )
             for wish in wishes:
                 wish_id = wish.pop('id')
                 text = RESERVED_WISH.format(
                     wish_name=wish['wish_name'],
                     product_link=wish['product_link'] + '\n' if wish['product_link'] else '',
-                    name=wish['username'],
-                    birthdate=format_birthdate(wish['birthdate'])
+                    name=wish['username'] if wish['username'] else '',
+                    last_name=wish['last_name'] if wish['last_name'] else '',
+                    tg_nickname=wish['tg_nickname'] if wish['tg_nickname'] else ''
                 )
                 unreserve_wish_markup = markups.unreserve_wish_button(
                     wish_id=wish_id,
@@ -283,13 +317,6 @@ class Controller:
         user_info = self.db.get_user_info_by_user_id(user_id=friend_user_id)
         wishes = self.db.get_available_wishes_by_user_id(user_id=friend_user_id)
         if wishes:
-            text = WISHES_TOP
-            await self.bot.send_message(
-                chat_id=my_tg_id,
-                text=text,
-                reply_markup=None,
-                parse_mode='HTML'
-            )
             for wish in wishes:
                 wish_id = wish.pop('id')
                 text = FRIEND_WISH.format(
@@ -312,18 +339,21 @@ class Controller:
                 )
             if number_of_wishes_reserved_by_me < 2:
                 text = FRIEND_WISHES_BOTTOM.format(
-                    name=user_info["name"], 
-                    birthdate=format_birthdate(user_info["birthdate"])
+                    name=user_info['name'] if user_info['name'] else '', 
+                    last_name=user_info['last_name'] if user_info['last_name'] else '',
+                    tg_nickname=user_info['tg_nickname'] if user_info['tg_nickname'] else ''
                 )
             else:
                 text = FRIENDS_WISHES_BLOCKED.format(
-                    name=user_info["name"], 
-                    birthdate=format_birthdate(user_info["birthdate"])
+                    name=user_info['name'] if user_info['name'] else '', 
+                    last_name=user_info['last_name'] if user_info['last_name'] else '',
+                    tg_nickname=user_info['tg_nickname'] if user_info['tg_nickname'] else ''
                 )
         else:
             text = FRIEND_WISHES_EMPTY_BOTTOM.format(
-                name=user_info["name"], 
-                birthdate=format_birthdate(user_info["birthdate"])
+                    name=user_info['name'] if user_info['name'] else '', 
+                    last_name=user_info['last_name'] if user_info['last_name'] else '',
+                    tg_nickname=user_info['tg_nickname'] if user_info['tg_nickname'] else ''
             )
         markup = markups.friend_wishlist_markup()
         return dict(text=text, markup=markup)

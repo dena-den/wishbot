@@ -3,7 +3,7 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.sql.elements import and_
 from app.db.models import *
 from os import getenv
-from sqlalchemy import select, delete, func
+from sqlalchemy import select, delete, func, update
 from app.const.queries import *
 from app.logic.utils import get_moscow_datetime
 import logging
@@ -42,6 +42,20 @@ class Database:
                     .where(KeyboardHash.tg_id.__eq__(tg_id))) \
                     .scalar()
                 return query
+
+    def is_user_actual(self, user_data):
+        with self.session() as session:
+            with session.begin():
+                query = session \
+                    .execute(select(User.id) \
+                    .where(and_(
+                        User.tg_id.__eq__(user_data['tg_id']),
+                        User.name.__eq__(user_data['name']),
+                        User.last_name.__eq__(user_data['last_name']),
+                        User.tg_nickname.__eq__(user_data['tg_nickname'])
+                    ))) \
+                    .scalar()
+                return bool(query)   
 
     def is_user_exist_by_tg_id(self, tg_id):
         with self.session() as session:
@@ -110,10 +124,10 @@ class Database:
         with self.session() as session:
             with session.begin():
                 query = session \
-                    .execute(select(User.name, User.birthdate) \
+                    .execute(select(User.name, User.last_name, User.tg_nickname) \
                     .where(User.id.__eq__(user_id))) \
                     .fetchone()
-                return query
+                return dict(query)
 
     def get_wish_name_by_id(self, wish_id):
         with self.session() as session:
@@ -167,8 +181,23 @@ class Database:
     def add_user(self, user_data):
         with self.session() as session:
             with session.begin():
-                data = User(**user_data)       
+                data = User(**user_data)
                 session.add(data)
+
+    def upsert_user(self, user_data):
+        with self.session() as session:
+            with session.begin():
+                session.execute(QUERY_UPSERT_USER.format(**user_data))
+
+    def update_user(self, user_data):
+        with self.session() as session:
+            with session.begin():
+                user_id = user_data.pop('id')
+                session.execute(
+                    update(User)
+                    .where(User.id.__eq__(user_id))
+                    .values(user_data)
+                )
 
     def add_wish(self, wishlist_data):
         with self.session() as session:
@@ -252,3 +281,20 @@ class Database:
                     .execute(to_exec) \
                     .fetchall()
                 return [dict(row) for row in query if query]
+
+    def is_user_admin(self, tg_id):
+        with self.session() as session:
+            with session.begin():
+                query = session \
+                    .execute(select(User.is_admin) \
+                    .where(User.tg_id.__eq__(tg_id))) \
+                    .scalar()
+                return bool(query)
+
+    def get_all_users_tg_id(self):
+        with self.session() as session:
+            with session.begin():
+                query = session \
+                    .execute(select(User.tg_id)) \
+                    .fetchall()
+                return [row['tg_id'] for row in query if query]

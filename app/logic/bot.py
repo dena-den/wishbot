@@ -85,6 +85,57 @@ async def create_invitation_process(
     )
 
 
+@dp.callback_query_handler(classes.MailingMessage.filter(), state='*')
+@rate_limit(1, 'prepare_mailing')
+async def prepare_mailing_to_users_process(
+    query: types.CallbackQuery,
+    state: FSMContext
+):
+    tg_id = query.from_user.id
+    await query.answer()
+    response = await c.prepare_mailing_to_users(state=state)
+    await bot.send_message(
+        chat_id=tg_id,
+        text=response['text'],
+        reply_markup=response['markup'],
+        parse_mode='HTML'
+    )
+
+
+@dp.message_handler(state=states.Admin.mailing_text)
+@rate_limit(1, 'confirm_mailing')
+async def confirm_mailing_to_users_process(
+    message: types.Message,
+    state: FSMContext
+):
+    tg_id = message.from_user.id
+    response = await c.confirm_mailing_to_users(message=message, state=state)
+    await bot.send_message(
+        chat_id=tg_id,
+        text=response['text'],
+        reply_markup=response['markup'],
+        parse_mode='HTML'
+    )
+
+
+@dp.callback_query_handler(classes.MailingSend.filter(), state='*')
+@rate_limit(1, 'send_mailing')
+async def send_mailing_to_users_process(
+    query: types.CallbackQuery,
+    state: FSMContext
+):
+    tg_id = query.from_user.id
+    await query.answer()
+    await query.message.delete()
+    response = await c.send_mailing_to_users(state=state)
+    await bot.send_message(
+        chat_id=tg_id,
+        text=response['text'],
+        reply_markup=response['markup'],
+        parse_mode='HTML'
+    )
+
+
 @dp.message_handler(commands='my_wishes', state='*')
 @dp.callback_query_handler(classes.MyWishlist.filter(), state='*')
 @rate_limit(1, 'my_wishlist')
@@ -94,11 +145,11 @@ async def display_my_wishlist_callback_process(
 ):
     await state.finish()
     tg_id = query.from_user.id
+    is_user_actual = await c.check_is_user_actual(from_user=query.from_user)
+    if not is_user_actual:
+        await c.upsert_user_to_db(from_user=query.from_user)
     if isinstance(query, types.CallbackQuery):
         await query.answer()
-    is_user_exist = await c.check_is_user_exist(tg_id=tg_id)
-    if not is_user_exist:
-        await c.add_user_to_db(query=query)
     response = await c.display_my_wishlist(tg_id=tg_id)
     await bot.send_message(
         chat_id=tg_id,
@@ -174,9 +225,10 @@ async def delete_wish_process(query: types.CallbackQuery, state: FSMContext, cal
     db_hash = await c.get_keyboard_hash(tg_id=tg_id)
     received_hash = int(callback_data['hashed'])
     if db_hash != received_hash:
+        await query.answer()
         return
     if callback_data['is_reserved'] == 'True':
-        message_to_delete = query.message.message_id
+        message_to_delete = f'{query.message.chat.id}/{query.message.message_id}'
         response = await c.delete_wish_if_reserved(
             tg_id=tg_id,
             wish_id=callback_data['wish_id'],
@@ -184,16 +236,20 @@ async def delete_wish_process(query: types.CallbackQuery, state: FSMContext, cal
         )    
         await query.answer()
         await bot.send_message(
-        chat_id=tg_id,
-        text=response['text'],
-        reply_markup=response['markup'],
-        parse_mode='HTML'
-    )
+            chat_id=tg_id,
+            text=response['text'],
+            reply_markup=response['markup'],
+            parse_mode='HTML'
+        )
     else:
         await c.delete_wish(wish_id=callback_data['wish_id'])
         await query.message.delete()
         if callback_data['message_to_delete']:
-            # delete_message(message_id=callback_data['message_to_delete']) TO DO - try to use simple delete message (delete by username and message_id)
+            chat_id, message_id = callback_data['message_to_delete'].split('/')
+            await bot.delete_message(
+                chat_id=chat_id,
+                message_id=message_id
+            )
         await query.answer('Подарок удален')
 
 
@@ -204,6 +260,7 @@ async def input_wish_link_process(query: types.CallbackQuery, state: FSMContext,
     db_hash = await c.get_keyboard_hash(tg_id=tg_id)
     received_hash = int(callback_data['hashed'])
     if db_hash != received_hash:
+        await query.answer()
         return
     await query.answer()
     response = await c.input_wish_link(state=state, wish_id=callback_data['wish_id'])
@@ -274,12 +331,12 @@ async def enter_friends_code_process(
 @dp.message_handler(state=states.Friend.friend_code)
 @rate_limit(1, 'friend_wishlist')
 async def display_friends_wishlist_process(query: types.CallbackQuery, state: FSMContext):
-    await state.finish()
     try:
         tg_id = query.from_user.id
         friend_user_id = await c.get_friend_user_id(query=query)
         await c.add_last_viewed_id(my_tg_id=tg_id, friend_user_id=friend_user_id)
         response = await c.display_friends_wishlist(my_tg_id=tg_id, friend_user_id=friend_user_id)
+        await state.finish()
     except classes.CodeNotValid:
         response = dict(
             text='Код должен состоять только из 6 цифр. Попробуй еще раз.',
@@ -325,12 +382,13 @@ async def reserve_wish_process(query: types.CallbackQuery, state: FSMContext, ca
     db_hash = await c.get_keyboard_hash(tg_id=tg_id)
     received_hash = int(callback_data['hashed'])
     if db_hash != received_hash:
+        await query.answer()
         return
     is_wish_reserved = await c.check_is_wish_reserved(wish_id=callback_data['wish_id'])
     if not is_wish_reserved:
         await c.reserve_wish(wish_id=callback_data['wish_id'], tg_id=tg_id)
-        await query.message.delete()
         await query.answer('Подарок выбран')
+        await query.message.delete()
     else:
         await query.answer('Простите, кто-то уже выбрал этот подарок, попробуйте другой.')
 
@@ -342,22 +400,23 @@ async def unreserve_wish_process(query: types.CallbackQuery, state: FSMContext, 
     db_hash = await c.get_keyboard_hash(tg_id=tg_id)
     received_hash = int(callback_data['hashed'])
     if db_hash != received_hash:
+        await query.answer()
         return
     await c.unreserve_wish(wish_id=callback_data['wish_id'], tg_id=tg_id)
     await query.answer('Подарок отменен')
-    response = await c.display_wishes_reserved_by_me(tg_id=tg_id)
-    await bot.send_message(
-        chat_id=tg_id,
-        text=response['text'],
-        reply_markup=response['markup'],
-        parse_mode='HTML'
-    )
+    await query.message.delete()
 
 
 @dp.callback_query_handler(classes.EmptyCallback.filter(), state='*')
 @rate_limit(1, 'empty_callback')
 async def empty_callback_process(query: types.CallbackQuery, state: FSMContext):
     await query.answer()
+
+
+@dp.callback_query_handler(classes.Cancel.filter(), state='*')
+@rate_limit(1, 'cancel_callback')
+async def cancel_callback_process(query: types.CallbackQuery, state: FSMContext):
+    await query.message.delete()
 
 
 """@dp.message_handler(Text(equals="Notification"))

@@ -1,10 +1,17 @@
+QUERY_UPSERT_USER = """
+  REPLACE INTO users (name, last_name, tg_id, tg_nickname, registration_datetime)
+  VALUES ('{name}', '{last_name}', {tg_id}, '{tg_nickname}', '{registration_datetime}')
+"""
+
+
 QUERY_WISHES_RESERVED_BY_ME = """
     SELECT 
       wl.id
     , wl.name AS wish_name
     , wl.product_link
     , u.name AS username
-    , u.birthdate 
+    , u.last_name
+    , u.tg_nickname
     FROM wish_histories wh 
         JOIN wishlists wl ON wl.id = wh.wish_id	
                         AND wh.tg_id_who_chose = {tg_id}

@@ -15,7 +15,10 @@ WishToReserve = CallbackData('reserve', 'wish_id', 'hashed')
 WishToUnreserve = CallbackData('unreserve', 'wish_id', 'hashed')
 AddLink = CallbackData('add_link', 'wish_id', 'hashed')
 LastViewedId = CallbackData('last_viewed', 'friend_user_id')
+MailingMessage = CallbackData('mailing_message')
+MailingSend = CallbackData('mailing_send')
 
+Cancel = CallbackData('cancel')
 EmptyCallback = CallbackData('empty')
 
 

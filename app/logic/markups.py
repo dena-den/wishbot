@@ -2,18 +2,18 @@ from aiogram import types
 from app.const import classes
 
 
-def start_menu_markup():
+def start_menu_markup(is_admin: int):
     markup = types.InlineKeyboardMarkup(row_width=2)
     markup.insert(types.InlineKeyboardButton(
-        "Открыть мой вишлист",
+        "Мой вишлист",
         callback_data=classes.MyWishlist.new())
     )
     markup.insert(types.InlineKeyboardButton(
-        "Выбрать подарок другу",
+        "Вишлисты друзей",
         callback_data=classes.FindFriend.new())
     )
     markup.insert(types.InlineKeyboardButton(
-        "Забронированные подарки",
+        "Выбранные мною подарки",
         callback_data=classes.ReservedWishes.new())
     )
     markup.insert(types.InlineKeyboardButton(
@@ -21,9 +21,14 @@ def start_menu_markup():
         callback_data=classes.Invitation.new())
     )
     markup.insert(types.InlineKeyboardButton(
-        "Как со мной общаться?",
+        "Как пользоваться ботом",
         callback_data=classes.Instruction.new())
     )
+    if is_admin:
+        markup.add(types.InlineKeyboardButton(
+            "Разослать сообщение всем пользователям",
+            callback_data=classes.MailingMessage.new())
+        )
     return markup
 
 
@@ -39,8 +44,8 @@ def back_to_start_markup():
 def back_to_my_wishlist_markup():
     markup = types.InlineKeyboardMarkup(row_width=2)
     markup.insert(types.InlineKeyboardButton(
-        "Назад в мой вишлист",
-        callback_data=classes.MyWishlist.new())
+        "Отмена",
+        callback_data=classes.Cancel.new())
     )
     return markup
 
@@ -61,7 +66,7 @@ def my_wishlist_markup():
         callback_data=classes.AddWish.new())
     )
     markup.insert(types.InlineKeyboardButton(
-        "Добавить желания списком",
+        "Добавить несколько желаний",
         callback_data=classes.AddWishes.new())
     )
     markup.insert(types.InlineKeyboardButton(
@@ -108,8 +113,8 @@ def deleting_approval_button(wish_id: int, hashed: int, message_to_delete: int):
         )
     ))
     markup.insert(types.InlineKeyboardButton(
-        'Назад к списку',
-        callback_data=classes.MyWishlist.new()
+        'Отмена',
+        callback_data=classes.Cancel.new()
     ))
     return markup
 
@@ -117,7 +122,7 @@ def deleting_approval_button(wish_id: int, hashed: int, message_to_delete: int):
 def reserve_wish_button(wish_id: int, hashed: int):
     markup = types.InlineKeyboardMarkup(row_width=2)
     markup.add(types.InlineKeyboardButton(
-        'Выбрать подарок',
+        'Выбрать этот подарок',
         callback_data=classes.WishToReserve.new(
             wish_id=wish_id,
             hashed=hashed
@@ -145,6 +150,10 @@ def friend_wishlist_markup():
         callback_data=classes.FindFriend.new())
     )
     markup.insert(types.InlineKeyboardButton(
+        "Выбранные мною подарки",
+        callback_data=classes.ReservedWishes.new())
+    )
+    markup.add(types.InlineKeyboardButton(
         "Главное меню",
         callback_data=classes.Start.new())
     )
@@ -154,7 +163,7 @@ def friend_wishlist_markup():
 def wishes_reseved_by_me_markup():
     markup = types.InlineKeyboardMarkup(row_width=2)
     markup.insert(types.InlineKeyboardButton(
-        "Выбрать вишлист друга",
+        "Вишлисты друзей",
         callback_data=classes.FindFriend.new())
     )
     markup.insert(types.InlineKeyboardButton(
@@ -181,7 +190,20 @@ def last_viewed_friends_markup(last_viewed_data):
             callback_data=classes.EmptyCallback.new()
         )) 
     markup.add(types.InlineKeyboardButton(
-        'Назад в стартовое меню',
+        'Главное меню',
         callback_data=classes.Start.new()
     ))
+    return markup
+
+
+def mailing_confirmation():
+    markup = types.InlineKeyboardMarkup(row_width=2)
+    markup.insert(types.InlineKeyboardButton(
+        "Да, отправляй",
+        callback_data=classes.MailingSend.new())
+    )
+    markup.insert(types.InlineKeyboardButton(
+        "Главное меню",
+        callback_data=classes.Start.new())
+    )
     return markup

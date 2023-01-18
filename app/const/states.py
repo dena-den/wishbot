@@ -9,3 +9,6 @@ class Wish(StatesGroup):
 
 class Friend(StatesGroup):
     friend_code = State()
+
+class Admin(StatesGroup):
+    mailing_text = State()
