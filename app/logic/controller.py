@@ -9,6 +9,7 @@ from app.logic import memory
 from random import randint, random, choice
 from app.logic.utils import get_moscow_datetime
 from aiogram.utils.exceptions import BotBlocked
+from aiogram.types import ReplyKeyboardRemove
 
 
 class Controller:
@@ -24,6 +25,14 @@ class Controller:
         self.db.add_empty_keyboard_hash(tg_id=tg_id)
         is_user_exist = self.db.is_user_exist_by_tg_id(tg_id=tg_id)
         if is_user_exist:
+            text = '👋'
+            markup = ReplyKeyboardRemove()
+            await self.bot.send_message(
+                chat_id=tg_id,
+                text=text,
+                reply_markup=markup,
+                parse_mode='HTML'
+            )
             text = choice(START_PHRASES)
         else:
             text = START_FOR_NEWBIES.format(name=name)
@@ -216,13 +225,11 @@ class Controller:
         wish_name = self.db.get_wish_name_by_id(wish_id=wish_id)
         return wish_name
 
-    async def delete_wish_if_reserved(self, tg_id, wish_id, message_to_delete):
-        hashed = hash(random())
-        self.db.update_keyboard_hash(tg_id=tg_id, hashed=hashed)
+    async def delete_wish_if_reserved(self, tg_id, wish_id, message_to_delete, keyboard_hash):
         text = '<b>Этот подарок забронирован одним из твоих друзей.</b> \nУдаляй его только если твой праздник уже прошел.'
         markup = markups.deleting_approval_button(
             wish_id=wish_id,
-            hashed=hashed,
+            hashed=keyboard_hash,
             message_to_delete=message_to_delete
         )
         return dict(text=text, markup=markup)

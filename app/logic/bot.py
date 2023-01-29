@@ -232,7 +232,8 @@ async def delete_wish_process(query: types.CallbackQuery, state: FSMContext, cal
         response = await c.delete_wish_if_reserved(
             tg_id=tg_id,
             wish_id=callback_data['wish_id'],
-            message_to_delete=message_to_delete
+            message_to_delete=message_to_delete,
+            keyboard_hash = received_hash
         )    
         await query.answer()
         await bot.send_message(
