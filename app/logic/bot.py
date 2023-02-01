@@ -33,6 +33,9 @@ async def command_start_process(
 ):
     await state.finish()
     tg_id = query.from_user.id
+    is_user_actual = await c.check_is_user_actual(from_user=query.from_user)
+    if not is_user_actual:
+        await c.upsert_user_to_db(from_user=query.from_user)
     if isinstance(query, types.CallbackQuery):
         await query.answer()
     name = query.from_user.first_name
@@ -145,9 +148,6 @@ async def display_my_wishlist_callback_process(
 ):
     await state.finish()
     tg_id = query.from_user.id
-    is_user_actual = await c.check_is_user_actual(from_user=query.from_user)
-    if not is_user_actual:
-        await c.upsert_user_to_db(from_user=query.from_user)
     if isinstance(query, types.CallbackQuery):
         await query.answer()
     response = await c.display_my_wishlist(tg_id=tg_id)
