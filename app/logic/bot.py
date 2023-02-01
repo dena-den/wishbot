@@ -334,6 +334,9 @@ async def enter_friends_code_process(
 async def display_friends_wishlist_process(query: types.CallbackQuery, state: FSMContext):
     try:
         tg_id = query.from_user.id
+        is_user_actual = await c.check_is_user_actual(from_user=query.from_user)
+        if not is_user_actual:
+            await c.upsert_user_to_db(from_user=query.from_user)
         friend_user_id = await c.get_friend_user_id(query=query)
         await c.add_last_viewed_id(my_tg_id=tg_id, friend_user_id=friend_user_id)
         response = await c.display_friends_wishlist(my_tg_id=tg_id, friend_user_id=friend_user_id)
